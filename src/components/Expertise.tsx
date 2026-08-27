@@ -590,19 +590,19 @@ function ExpertiseComponent() {
                 </button>
               </div>
 
-              {/* Tools Cards Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full max-h-[50vh] overflow-y-auto sm:max-h-none p-1">
+              {/* Tools Cards Grid - Free flowing without internal scrollbar, hugging all content */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 w-full p-1">
                 {filteredTools.map((tool) => {
                   const IconComponent = tool.icon;
                   return (
                     <div
                       key={tool.name}
-                      className="group relative p-3.5 rounded-2xl bg-white/60 hover:bg-white/95 border border-white/80 hover:border-white transition-all duration-300 flex items-center gap-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-default"
+                      className="group relative p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white/70 hover:bg-white/95 border border-white/80 hover:border-white transition-all duration-300 flex items-center gap-2 sm:gap-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-default"
                     >
-                      <div className="w-9 h-9 rounded-xl bg-black/[0.04] group-hover:bg-black/[0.08] flex items-center justify-center shrink-0 transition-colors p-1.5">
-                        <IconComponent size={20} />
+                      <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-black/[0.04] group-hover:bg-black/[0.08] flex items-center justify-center shrink-0 transition-colors p-1 sm:p-1.5">
+                        <IconComponent size={18} />
                       </div>
-                      <span className="font-sans font-bold text-xs sm:text-sm text-[#0f0f0f] leading-tight">
+                      <span className="font-sans font-bold text-[11px] sm:text-xs md:text-sm text-[#0f0f0f] leading-tight truncate">
                         {tool.name}
                       </span>
                     </div>

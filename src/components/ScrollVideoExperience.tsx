@@ -35,8 +35,11 @@ export default function ScrollVideoExperience() {
     const container = containerRef.current;
     if (!video || !container) return;
 
-    // Ensure video plays on mobile
-    video.play().catch(() => {});
+    // Mobile inline play initiation
+    const startPlay = () => {
+      video.play().catch(() => {});
+    };
+    startPlay();
 
     let duration = video.duration || 7.52;
     const handleLoadedMetadata = () => {
@@ -50,10 +53,11 @@ export default function ScrollVideoExperience() {
     let currentTime = 0;
     let rafId: number;
 
+    // Ultra-smooth high-performance interpolation for video scrubbing
     const renderLoop = () => {
       if (video.readyState >= 2) {
-        currentTime += (targetTime - currentTime) * 0.1;
-        if (Math.abs(currentTime - video.currentTime) > 0.005) {
+        currentTime += (targetTime - currentTime) * 0.12;
+        if (Math.abs(currentTime - video.currentTime) > 0.004) {
           video.currentTime = Math.min(Math.max(currentTime, 0), duration - 0.03);
         }
       }
@@ -67,7 +71,7 @@ export default function ScrollVideoExperience() {
       end: "+=300%",
       pin: true,
       pinSpacing: true,
-      scrub: 1,
+      scrub: 0.8,
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
@@ -97,7 +101,7 @@ export default function ScrollVideoExperience() {
   return (
     <section 
       ref={containerRef} 
-      className="relative w-full h-[100dvh] bg-black overflow-hidden select-none"
+      className="relative w-full h-[100dvh] bg-black overflow-hidden select-none transform-gpu"
     >
       <div className="relative w-full h-full">
         {/* Pure 100% Raw Video Frame Scrubber - No overlay filters or transparent background layers */}
@@ -110,30 +114,30 @@ export default function ScrollVideoExperience() {
             autoPlay
             loop
             preload="auto"
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-cover object-center transform-gpu"
           />
         </div>
 
-        {/* Minimal cinematic editorial corner metadata with crisp text shadow for readability */}
-        <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between p-6 sm:p-10 md:p-14 font-mono text-xs tracking-widest text-white">
+        {/* Minimal cinematic editorial corner metadata with safe-zone top padding for mobile navbar */}
+        <div className="absolute inset-0 pointer-events-none z-20 flex flex-col justify-between pt-24 sm:pt-14 pb-8 sm:pb-12 px-5 sm:px-10 md:px-14 font-mono text-xs tracking-widest text-white">
           <div className="flex justify-between items-center w-full">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5 sm:gap-3">
               <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.8)]" />
-              <span className="text-white font-mono text-[11px] tracking-[0.25em] uppercase [text-shadow:_0_2px_8px_rgba(0,0,0,0.9),_0_4px_16px_rgba(0,0,0,0.8)]">
+              <span className="text-white font-mono text-[10px] sm:text-[11px] tracking-[0.2em] sm:tracking-[0.25em] uppercase [text-shadow:_0_2px_8px_rgba(0,0,0,0.9),_0_4px_16px_rgba(0,0,0,0.8)]">
                 {currentData.prefix}
               </span>
             </div>
-            <div className="text-[11px] text-white font-mono tracking-widest [text-shadow:_0_2px_8px_rgba(0,0,0,0.9),_0_4px_16px_rgba(0,0,0,0.8)]">
+            <div className="text-[10px] sm:text-[11px] text-white font-mono tracking-widest [text-shadow:_0_2px_8px_rgba(0,0,0,0.9),_0_4px_16px_rgba(0,0,0,0.8)]">
               0{activeStage + 1} / 03
             </div>
           </div>
 
           <div className="flex justify-between items-end w-full">
-            <p className="text-[11px] sm:text-xs text-white font-mono tracking-wider max-w-xs uppercase [text-shadow:_0_2px_8px_rgba(0,0,0,0.9),_0_4px_16px_rgba(0,0,0,0.8)]">
+            <p className="text-[10px] sm:text-xs text-white font-mono tracking-wider max-w-[180px] sm:max-w-xs uppercase [text-shadow:_0_2px_8px_rgba(0,0,0,0.9),_0_4px_16px_rgba(0,0,0,0.8)]">
               {currentData.sub}
             </p>
             <div className="flex items-center gap-2">
-              <div className="w-24 sm:w-32 h-[2px] bg-white/40 shadow-[0_2px_8px_rgba(0,0,0,0.9)] rounded-full overflow-hidden">
+              <div className="w-20 sm:w-32 h-[2px] bg-white/40 shadow-[0_2px_8px_rgba(0,0,0,0.9)] rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-white transition-all duration-150 ease-out" 
                   style={{ width: `${progress * 100}%` }}
@@ -143,33 +147,51 @@ export default function ScrollVideoExperience() {
           </div>
         </div>
 
-        {/* Center Main Stage Single Large Headline with Strong Drop Shadows and Clean Sizing */}
+        {/* Center Main Stage Single Large Headline - Responsive fluid typography so text never gets cut off */}
         <div className="relative z-10 w-full h-full flex items-center justify-center pointer-events-none px-4 sm:px-8 md:px-12">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeStage}
               className="w-full flex flex-col items-center justify-center text-center overflow-hidden px-2"
             >
-              <div className="overflow-hidden py-3 sm:py-4 w-full flex justify-center">
+              <div className="overflow-hidden py-2 sm:py-4 w-full flex justify-center items-center">
                 <motion.h1
                   initial={{ y: "115%", rotateX: -25, opacity: 0 }}
                   animate={{ y: "0%", rotateX: 0, opacity: 1 }}
                   exit={{ y: "-115%", rotateX: 25, opacity: 0 }}
                   transition={{
-                    duration: 0.75,
+                    duration: 0.7,
                     ease: [0.16, 1, 0.3, 1],
                   }}
                   style={{
                     fontFamily: 'var(--font-display, "Syne", sans-serif)',
                     transformPerspective: 1000,
                   }}
-                  className="whitespace-nowrap text-3xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[6vw] font-extrabold tracking-tight text-white uppercase leading-[0.95] select-none [text-shadow:_0_4px_24px_rgba(0,0,0,0.95),_0_12px_48px_rgba(0,0,0,0.9),_0_24px_72px_rgba(0,0,0,0.85)] drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
+                  className="text-[clamp(1.75rem,6.4vw,5.5rem)] font-extrabold tracking-tight text-white uppercase leading-none select-none sm:whitespace-nowrap max-w-full [text-shadow:_0_4px_24px_rgba(0,0,0,0.95),_0_12px_48px_rgba(0,0,0,0.9),_0_24px_72px_rgba(0,0,0,0.85)] drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
                 >
                   {currentData.title}
                 </motion.h1>
               </div>
             </motion.div>
           </AnimatePresence>
+        </div>
+
+        {/* Scroll Down Indicator */}
+        <div className="absolute bottom-6 sm:bottom-8 left-1/2 -translate-x-1/2 pointer-events-none z-30 flex flex-col items-center gap-1.5 sm:gap-2 text-white select-none">
+          <span className="font-mono text-[9px] sm:text-[10px] tracking-[0.25em] sm:tracking-[0.3em] uppercase text-white/90 [text-shadow:_0_2px_8px_rgba(0,0,0,0.95)]">
+            SCROLL DOWN
+          </span>
+          <motion.div
+            animate={{ y: [0, 5, 0] }}
+            transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+            className="w-4 h-7 sm:w-5 sm:h-9 rounded-full border border-white/60 flex items-start justify-center p-1 shadow-[0_2px_12px_rgba(0,0,0,0.9)] bg-black/30 backdrop-blur-xs"
+          >
+            <motion.div
+              animate={{ y: [0, 8, 0], opacity: [1, 0.2, 1] }}
+              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+              className="w-1 h-1.5 sm:w-1 sm:h-2 bg-orange-500 rounded-full shadow-[0_0_6px_rgba(249,115,22,0.9)]"
+            />
+          </motion.div>
         </div>
       </div>
     </section>
