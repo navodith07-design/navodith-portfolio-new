@@ -35,6 +35,9 @@ export default function ScrollVideoExperience() {
     const container = containerRef.current;
     if (!video || !container) return;
 
+    // Ensure video plays on mobile
+    video.play().catch(() => {});
+
     let duration = video.duration || 7.52;
     const handleLoadedMetadata = () => {
       duration = video.duration || 7.52;
@@ -49,7 +52,7 @@ export default function ScrollVideoExperience() {
 
     const renderLoop = () => {
       if (video.readyState >= 2) {
-        currentTime += (targetTime - currentTime) * 0.08;
+        currentTime += (targetTime - currentTime) * 0.1;
         if (Math.abs(currentTime - video.currentTime) > 0.005) {
           video.currentTime = Math.min(Math.max(currentTime, 0), duration - 0.03);
         }
@@ -61,10 +64,12 @@ export default function ScrollVideoExperience() {
     const st = ScrollTrigger.create({
       trigger: container,
       start: "top top",
-      end: "+=350%",
+      end: "+=300%",
       pin: true,
-      scrub: 1.2,
+      pinSpacing: true,
+      scrub: 1,
       anticipatePin: 1,
+      invalidateOnRefresh: true,
       onUpdate: (self) => {
         const p = self.progress;
         setProgress(p);
@@ -92,7 +97,7 @@ export default function ScrollVideoExperience() {
   return (
     <section 
       ref={containerRef} 
-      className="relative w-full h-screen min-h-screen bg-black overflow-hidden select-none"
+      className="relative w-full h-[100dvh] bg-black overflow-hidden select-none"
     >
       <div className="relative w-full h-full">
         {/* Pure 100% Raw Video Frame Scrubber - No overlay filters or transparent background layers */}
@@ -102,6 +107,8 @@ export default function ScrollVideoExperience() {
             src={cinematicVideo}
             muted
             playsInline
+            autoPlay
+            loop
             preload="auto"
             className="w-full h-full object-cover object-center"
           />
@@ -141,9 +148,9 @@ export default function ScrollVideoExperience() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeStage}
-              className="w-full max-w-6xl flex flex-col items-center justify-center text-center overflow-hidden px-2"
+              className="w-full flex flex-col items-center justify-center text-center overflow-hidden px-2"
             >
-              <div className="overflow-hidden py-3 sm:py-4 w-full">
+              <div className="overflow-hidden py-3 sm:py-4 w-full flex justify-center">
                 <motion.h1
                   initial={{ y: "115%", rotateX: -25, opacity: 0 }}
                   animate={{ y: "0%", rotateX: 0, opacity: 1 }}
@@ -156,7 +163,7 @@ export default function ScrollVideoExperience() {
                     fontFamily: 'var(--font-display, "Syne", sans-serif)',
                     transformPerspective: 1000,
                   }}
-                  className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[6.2vw] font-extrabold tracking-tight text-white uppercase leading-[0.95] select-none break-words max-w-full [text-shadow:_0_4px_24px_rgba(0,0,0,0.95),_0_12px_48px_rgba(0,0,0,0.9),_0_24px_72px_rgba(0,0,0,0.85)] drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
+                  className="whitespace-nowrap text-3xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[6vw] font-extrabold tracking-tight text-white uppercase leading-[0.95] select-none [text-shadow:_0_4px_24px_rgba(0,0,0,0.95),_0_12px_48px_rgba(0,0,0,0.9),_0_24px_72px_rgba(0,0,0,0.85)] drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
                 >
                   {currentData.title}
                 </motion.h1>
