@@ -35,15 +35,18 @@ export default function ScrollVideoExperience() {
     const container = containerRef.current;
     if (!video || !container) return;
 
-    // Mobile inline play initiation
-    const startPlay = () => {
-      video.play().catch(() => {});
+    // Mobile & iOS inline play-pause unlock without looping
+    const unlockVideo = () => {
+      video.play().then(() => {
+        video.pause();
+      }).catch(() => {});
     };
-    startPlay();
+    unlockVideo();
 
     let duration = video.duration || 7.52;
     const handleLoadedMetadata = () => {
       duration = video.duration || 7.52;
+      video.pause();
       ScrollTrigger.refresh();
     };
 
@@ -56,9 +59,9 @@ export default function ScrollVideoExperience() {
     // Ultra-smooth high-performance interpolation for video scrubbing
     const renderLoop = () => {
       if (video.readyState >= 2) {
-        currentTime += (targetTime - currentTime) * 0.12;
-        if (Math.abs(currentTime - video.currentTime) > 0.004) {
-          video.currentTime = Math.min(Math.max(currentTime, 0), duration - 0.03);
+        currentTime += (targetTime - currentTime) * 0.15;
+        if (Math.abs(currentTime - video.currentTime) > 0.003) {
+          video.currentTime = Math.min(Math.max(currentTime, 0), Math.max(0, duration - 0.03));
         }
       }
       rafId = requestAnimationFrame(renderLoop);
@@ -71,11 +74,11 @@ export default function ScrollVideoExperience() {
       end: "+=300%",
       pin: true,
       pinSpacing: true,
-      scrub: 0.8,
+      scrub: 0.6,
       anticipatePin: 1,
       invalidateOnRefresh: true,
       onUpdate: (self) => {
-        const p = self.progress;
+        const p = Math.max(0, Math.min(1, self.progress));
         setProgress(p);
         targetTime = p * duration;
 
@@ -87,6 +90,16 @@ export default function ScrollVideoExperience() {
           setActiveStage(2);
         }
       },
+      onLeave: () => {
+        targetTime = duration - 0.03;
+        setProgress(1);
+        setActiveStage(2);
+      },
+      onEnterBack: () => {
+        targetTime = duration - 0.03;
+        setProgress(1);
+        setActiveStage(2);
+      }
     });
 
     return () => {
@@ -111,8 +124,6 @@ export default function ScrollVideoExperience() {
             src={cinematicVideo}
             muted
             playsInline
-            autoPlay
-            loop
             preload="auto"
             className="w-full h-full object-cover object-center transform-gpu"
           />
