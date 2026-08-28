@@ -479,11 +479,12 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
     let isInitialized = false;
     let lastTime = Date.now();
     let lastShakeTime = 0;
-    const SHAKE_COOLDOWN = 4500; // 4.5s cooldown between shakes matching reveal duration
+    const SHAKE_COOLDOWN = 4000; // 4s cooldown between shakes matching reveal duration
 
     const handleDeviceMotion = (e: DeviceMotionEvent) => {
       try {
-        const acc = (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null))
+        // Support all mobile OS acceleration vectors
+        const acc = e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)
           ? e.acceleration 
           : e.accelerationIncludingGravity;
         if (!acc) return;
@@ -491,7 +492,7 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
         const currentTime = Date.now();
         const diffTime = currentTime - lastTime;
 
-        if (diffTime > 50) {
+        if (diffTime > 40) {
           lastTime = currentTime;
           const x = acc.x || 0;
           const y = acc.y || 0;
@@ -510,8 +511,8 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
           const deltaZ = Math.abs(z - lastZ);
           const totalMovement = deltaX + deltaY + deltaZ;
 
-          // Responsive shake detection with cooldown
-          if (totalMovement > 8.5 && currentTime - lastShakeTime > SHAKE_COOLDOWN) {
+          // Responsive shake detection with cooldown (calibrated for natural handheld shakes)
+          if (totalMovement > 6.0 && currentTime - lastShakeTime > SHAKE_COOLDOWN) {
             lastShakeTime = currentTime;
             playLiquidSplash(0.45);
             triggerFullRevealBurst();
@@ -535,54 +536,55 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
       const beta = e.beta ?? 45;  // Front-to-Back (-180 to 180, resting around 40-50 deg)
 
       // Normalize around normal phone holding angle
-      const deltaBeta = Math.max(-35, Math.min(35, beta - 45));
-      const clampedGamma = Math.max(-35, Math.min(35, gamma));
+      const deltaBeta = Math.max(-40, Math.min(40, beta - 45));
+      const clampedGamma = Math.max(-40, Math.min(40, gamma));
 
-      const tiltX = (deltaBeta / 35) * -12;
-      const tiltY = (clampedGamma / 35) * 12;
+      // Apply direct interactive tilt to the central card
+      const tiltX = (deltaBeta / 40) * -18;
+      const tiltY = (clampedGamma / 40) * 18;
 
-      gsap.to(innerElement, {
-        rotateX: tiltX,
-        rotateY: tiltY,
-        transformPerspective: 1000,
-        scale: 1.01,
-        duration: 0.35,
-        ease: "power2.out",
-        overwrite: "auto",
-      });
+      innerElement.style.transform = `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) scale3d(1.02, 1.02, 1.02)`;
 
-      // Generate subtle fluid ripples from gyro tilt
+      // Generate fluid ink ripples from gyro tilt
       const canvas = canvasRef.current;
       if (canvas) {
         const w = cardCanvasSizeRef.current.w || canvas.clientWidth || 300;
         const h = cardCanvasSizeRef.current.h || canvas.clientHeight || 420;
-        const cx = (w / 2) + (clampedGamma / 35) * (w * 0.38);
-        const cy = (h / 2) + (deltaBeta / 35) * (h * 0.38);
+        const cx = (w / 2) + (clampedGamma / 40) * (w * 0.45);
+        const cy = (h / 2) + (deltaBeta / 40) * (h * 0.45);
 
         const now = performance.now();
-        if (now - lastPointerPushRef.current > 40) {
+        if (now - lastPointerPushRef.current > 35) {
           lastPointerPushRef.current = now;
           startCardLoop();
-          if (trailRef.current.length < 25) {
+          if (trailRef.current.length < 30) {
             trailRef.current.push({
-              x: cx + (Math.random() - 0.5) * 14,
-              y: cy + (Math.random() - 0.5) * 14,
-              radius: Math.random() * 30 + 80,
+              x: cx + (Math.random() - 0.5) * 16,
+              y: cy + (Math.random() - 0.5) * 16,
+              radius: Math.random() * 35 + 85,
               life: 1.0,
-              decay: 0.018,
-              vx: (Math.random() - 0.5) * 0.8,
-              vy: (Math.random() - 0.5) * 0.8,
+              decay: 0.015,
+              vx: (Math.random() - 0.5) * 1.2,
+              vy: (Math.random() - 0.5) * 1.2,
             });
           }
         }
       }
     };
 
-    let permissionRequested = false;
-    const requestSensorPermissions = async () => {
-      if (permissionRequested) return;
-      permissionRequested = true;
+    let isAttached = false;
+    const attachSensors = () => {
+      if (isAttached) return;
+      isAttached = true;
+      window.addEventListener("devicemotion", handleDeviceMotion, { passive: true });
+      window.addEventListener("deviceorientation", handleDeviceOrientation, { passive: true });
+    };
 
+    // Attach immediately for Android, Chrome, Firefox, and standard browsers
+    attachSensors();
+
+    // Attach on any initial user touch for iOS / Safari permission unlock
+    const handleFirstTouch = async () => {
       try {
         if (
           typeof DeviceMotionEvent !== "undefined" &&
@@ -590,10 +592,8 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
         ) {
           const res = await (DeviceMotionEvent as any).requestPermission();
           if (res === "granted") {
-            window.addEventListener("devicemotion", handleDeviceMotion, true);
+            attachSensors();
           }
-        } else {
-          window.addEventListener("devicemotion", handleDeviceMotion, true);
         }
       } catch {}
 
@@ -604,53 +604,24 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
         ) {
           const res = await (DeviceOrientationEvent as any).requestPermission();
           if (res === "granted") {
-            window.addEventListener("deviceorientation", handleDeviceOrientation, true);
+            attachSensors();
           }
-        } else {
-          window.addEventListener("deviceorientation", handleDeviceOrientation, true);
         }
       } catch {}
+
+      attachSensors();
     };
 
-    // Attach listeners directly for Android/standard browsers
-    try {
-      if (
-        typeof DeviceMotionEvent !== "undefined" &&
-        typeof (DeviceMotionEvent as any).requestPermission !== "function"
-      ) {
-        window.addEventListener("devicemotion", handleDeviceMotion, true);
-      }
-    } catch {}
-
-    try {
-      if (
-        typeof DeviceOrientationEvent !== "undefined" &&
-        typeof (DeviceOrientationEvent as any).requestPermission !== "function"
-      ) {
-        window.addEventListener("deviceorientation", handleDeviceOrientation, true);
-      }
-    } catch {}
-
-    const handleUserInteraction = () => {
-      requestSensorPermissions();
-      window.removeEventListener("touchstart", handleUserInteraction);
-      window.removeEventListener("touchend", handleUserInteraction);
-      window.removeEventListener("click", handleUserInteraction);
-      window.removeEventListener("pointerdown", handleUserInteraction);
-    };
-
-    window.addEventListener("touchstart", handleUserInteraction, { passive: true });
-    window.addEventListener("touchend", handleUserInteraction, { passive: true });
-    window.addEventListener("click", handleUserInteraction, { passive: true });
-    window.addEventListener("pointerdown", handleUserInteraction, { passive: true });
+    window.addEventListener("touchstart", handleFirstTouch, { once: true, passive: true });
+    window.addEventListener("pointerdown", handleFirstTouch, { once: true, passive: true });
+    window.addEventListener("click", handleFirstTouch, { once: true, passive: true });
 
     return () => {
-      window.removeEventListener("devicemotion", handleDeviceMotion, true);
-      window.removeEventListener("deviceorientation", handleDeviceOrientation, true);
-      window.removeEventListener("touchstart", handleUserInteraction);
-      window.removeEventListener("touchend", handleUserInteraction);
-      window.removeEventListener("click", handleUserInteraction);
-      window.removeEventListener("pointerdown", handleUserInteraction);
+      window.removeEventListener("devicemotion", handleDeviceMotion);
+      window.removeEventListener("deviceorientation", handleDeviceOrientation);
+      window.removeEventListener("touchstart", handleFirstTouch);
+      window.removeEventListener("pointerdown", handleFirstTouch);
+      window.removeEventListener("click", handleFirstTouch);
     };
   }, [revealHero]);
 
