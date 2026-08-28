@@ -29,39 +29,60 @@ export default function ScrollVideoExperience() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [activeStage, setActiveStage] = useState<number>(0);
   const [progress, setProgress] = useState<number>(0);
+  const [isVideoLoaded, setIsVideoLoaded] = useState<boolean>(false);
 
   useEffect(() => {
     const video = videoRef.current;
     const container = containerRef.current;
     if (!video || !container) return;
 
-    // Mobile & iOS inline play-pause unlock without looping
-    const unlockVideo = () => {
-      video.play().then(() => {
-        video.pause();
-      }).catch(() => {});
-    };
-    unlockVideo();
+    let duration = 7.52;
 
-    let duration = video.duration || 7.52;
-    const handleLoadedMetadata = () => {
+    const onReady = () => {
       duration = video.duration || 7.52;
-      video.pause();
+      setIsVideoLoaded(true);
+      // Force initial frame decode for mobile
+      if (video.currentTime === 0) {
+        try {
+          video.currentTime = 0.001;
+        } catch {}
+      }
       ScrollTrigger.refresh();
     };
 
-    video.addEventListener("loadedmetadata", handleLoadedMetadata);
+    video.addEventListener("loadedmetadata", onReady);
+    video.addEventListener("canplay", onReady);
+    video.addEventListener("loadeddata", onReady);
+
+    // Initial trigger if cached
+    if (video.readyState >= 1) {
+      onReady();
+    } else {
+      video.load();
+    }
 
     let targetTime = 0;
     let currentTime = 0;
     let rafId: number;
 
-    // Ultra-smooth high-performance interpolation for video scrubbing
+    // Ultra-smooth high-performance interpolation for mobile & desktop video scrubbing
     const renderLoop = () => {
-      if (video.readyState >= 2) {
-        currentTime += (targetTime - currentTime) * 0.15;
-        if (Math.abs(currentTime - video.currentTime) > 0.003) {
-          video.currentTime = Math.min(Math.max(currentTime, 0), Math.max(0, duration - 0.03));
+      if (video.readyState >= 1) {
+        currentTime += (targetTime - currentTime) * 0.18;
+        const diff = Math.abs(currentTime - video.currentTime);
+        
+        // Seek only when difference is perceptible and browser is not actively locked in a seek
+        if (diff > 0.003 && !video.seeking) {
+          const clamped = Math.min(Math.max(currentTime, 0.001), Math.max(0.001, duration - 0.03));
+          if ("fastSeek" in video && typeof (video as any).fastSeek === "function") {
+            try {
+              (video as any).fastSeek(clamped);
+            } catch {
+              video.currentTime = clamped;
+            }
+          } else {
+            video.currentTime = clamped;
+          }
         }
       }
       rafId = requestAnimationFrame(renderLoop);
@@ -102,9 +123,18 @@ export default function ScrollVideoExperience() {
       }
     });
 
+    // Handle orientation & resize
+    const handleResize = () => {
+      ScrollTrigger.refresh();
+    };
+    window.addEventListener("resize", handleResize);
+
     return () => {
       cancelAnimationFrame(rafId);
-      video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      window.removeEventListener("resize", handleResize);
+      video.removeEventListener("loadedmetadata", onReady);
+      video.removeEventListener("canplay", onReady);
+      video.removeEventListener("loadeddata", onReady);
       st.kill();
     };
   }, []);
@@ -125,6 +155,8 @@ export default function ScrollVideoExperience() {
             muted
             playsInline
             preload="auto"
+            tabIndex={-1}
+            aria-hidden="true"
             className="w-full h-full object-cover object-center transform-gpu"
           />
         </div>

@@ -73,15 +73,12 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
 
   const handleMouseEnter = () => {
     setIsHovered(true);
-    // Dynamic aerodynamic motion whoosh on card scale/hover
     playKineticWhoosh('in', 0.22);
     if (videoRef.current) {
       videoRef.current.currentTime = 0;
       const playPromise = videoRef.current.play();
       if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Graceful fallback
-        });
+        playPromise.catch(() => {});
       }
     }
   };
@@ -96,19 +93,18 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
   };
 
   const handleClick = () => {
-    // Tactile lens / shutter click on project launch
     playTactileLensClick(0.28);
   };
 
   return (
     <motion.a
-      initial={{ opacity: 0, x: isEvenCol ? -85 : 85 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true, amount: 0.15, margin: "-40px" }}
+      initial={{ opacity: 0, y: 35 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.08, margin: "0px 0px -50px 0px" }}
       transition={{
-        duration: 0.85,
-        delay: (idx % 2) * 0.1,
-        ease: [0.16, 1, 0.3, 1],
+        duration: 0.7,
+        delay: (idx % 2) * 0.08,
+        ease: [0.22, 1, 0.36, 1],
       }}
       href={project.link}
       target={project.link?.startsWith("http") ? "_blank" : undefined}
@@ -116,16 +112,17 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      className="group relative flex flex-col rounded-3xl bg-white/[0.03] hover:bg-white/[0.07] backdrop-blur-2xl backdrop-saturate-150 border border-white/15 hover:border-white/40 transition-all duration-500 ease-out shadow-[0_8px_32px_0_rgba(0,0,0,0.5),inset_0_1px_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_20px_60px_0_rgba(0,0,0,0.75),inset_0_1px_2px_0_rgba(255,255,255,0.45)] hover:scale-[1.03] overflow-hidden cursor-pointer"
+      className="group relative flex flex-col rounded-3xl bg-white/[0.06] hover:bg-white/[0.12] backdrop-blur-xl md:backdrop-blur-2xl border border-white/20 hover:border-white/50 transition-all duration-300 ease-out shadow-[0_8px_32px_0_rgba(0,0,0,0.6),inset_0_1px_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_20px_60px_0_rgba(0,0,0,0.8),inset_0_1px_2px_0_rgba(255,255,255,0.45)] hover:scale-[1.02] overflow-hidden cursor-pointer transform-gpu"
     >
-      {/* Specular Liquid Glass Top Rim Light */}
-      <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent pointer-events-none z-30" />
+      {/* Specular Liquid Glass Top Rim Light & Prismatic Highlights */}
+      <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none z-30" />
+      <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-white/10 via-white/80 to-white/10 pointer-events-none z-30" />
 
-      {/* Ambient Liquid Sheen Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.08] via-white/[0.02] to-transparent pointer-events-none z-20 opacity-75 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* Ambient Liquid Sheen Overlay with Refraction Angles */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.12] via-white/[0.03] to-transparent pointer-events-none z-20 opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
       
       {/* Subtle Liquid Prismatic Glow Flare */}
-      <div className="absolute -top-20 -right-20 w-44 h-44 bg-white/10 rounded-full blur-2xl group-hover:scale-150 group-hover:bg-amber-400/10 transition-all duration-700 pointer-events-none" />
+      <div className="absolute -top-24 -right-24 w-52 h-52 bg-white/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-amber-300/15 transition-all duration-500 pointer-events-none" />
 
       {/* ========================================================================= */}
       {/* MEDIA FRAME (Layered Video + Cover Image + Glass Overlays)                */}
@@ -141,7 +138,7 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
             loop
             playsInline
             preload="auto"
-            className={`absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-500 ${
+            className={`absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-300 ${
               isHovered ? "opacity-100" : "opacity-0"
             }`}
           />
@@ -149,23 +146,23 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
           <div className="absolute inset-0 bg-black/80 z-0" />
         )}
 
-        {/* MIDDLE LAYER: Static Cover Image (Displays in default state, smoothly crossfades on hover) */}
+        {/* MIDDLE LAYER: Static Cover Image */}
         <img
           src={project.image}
           alt={project.title}
-          loading="eager"
-          className={`absolute inset-0 w-full h-full object-cover z-10 transition-all duration-500 ease-out pointer-events-none select-none ${
+          loading="lazy"
+          className={`absolute inset-0 w-full h-full object-cover z-10 transition-all duration-300 ease-out pointer-events-none select-none ${
             project.video && isHovered ? "opacity-0 scale-105" : "opacity-100 scale-100"
           }`}
           referrerPolicy="no-referrer"
         />
 
         {/* Ambient Dark Gradient for Legibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-70 group-hover:opacity-40 transition-opacity duration-500 z-15 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-70 group-hover:opacity-40 transition-opacity duration-300 z-15 pointer-events-none" />
 
-        {/* TOP LAYER (UI Controls within media): Liquid Glass Index Badge */}
+        {/* TOP LAYER: Liquid Glass Index Badge */}
         <div className="absolute top-3 left-3 z-30 pointer-events-none">
-          <span className="font-mono font-bold text-[10px] text-amber-300 bg-black/50 backdrop-blur-xl border border-white/20 px-2.5 py-1 rounded-lg shadow-md">
+          <span className="font-mono font-bold text-[10px] text-amber-300 bg-black/50 backdrop-blur-md border border-white/25 px-2.5 py-1 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)]">
             0{idx + 1}
           </span>
         </div>
@@ -176,7 +173,7 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
             e.stopPropagation();
             playAirDisplacement(0.16);
           }}
-          className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-xl border border-white/30 text-white flex items-center justify-center font-bold text-xs shadow-lg group-hover:bg-amber-400 group-hover:text-black group-hover:rotate-45 transition-all duration-300 z-30"
+          className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/35 text-white flex items-center justify-center font-bold text-xs shadow-[0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] group-hover:bg-amber-400 group-hover:text-black group-hover:rotate-45 transition-all duration-300 z-30"
         >
           <ArrowUpRight size={14} />
         </div>
@@ -205,7 +202,7 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
                   e.stopPropagation();
                   playAirDisplacement(0.11);
                 }}
-                className="font-mono text-[9px] bg-white/[0.06] hover:bg-white/[0.15] backdrop-blur-md border border-white/15 hover:border-white/35 text-white/80 hover:text-white px-2.5 py-0.5 rounded-md shadow-sm transition-all duration-200"
+                className="font-mono text-[9px] bg-white/[0.08] hover:bg-white/[0.18] backdrop-blur-md border border-white/20 hover:border-white/40 text-white/90 hover:text-white px-2.5 py-0.5 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-200"
               >
                 {tag}
               </span>
@@ -247,11 +244,11 @@ function ProjectsComponent() {
           <div className="relative w-full max-w-5xl px-4 sm:px-6 flex flex-col items-center justify-center my-auto">
             {/* WORKS large backdrop typography (Scales up & fades in) */}
             <motion.img
-              initial={{ opacity: 0, scale: 0.88, y: 30 }}
+              initial={{ opacity: 0, scale: 0.92, y: 20 }}
               whileInView={{ opacity: 1, scale: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
+              viewport={{ once: true, amount: 0.2 }}
               transition={{
-                duration: 1.1,
+                duration: 0.8,
                 ease: [0.16, 1, 0.3, 1],
               }}
               src={worksImg}
@@ -259,14 +256,14 @@ function ProjectsComponent() {
               className="relative z-10 w-[80vw] max-w-5xl select-none pointer-events-none drop-shadow-[0_20px_50px_rgba(0,0,0,0.95)]"
             />
 
-            {/* Selected Projects red cursive text (Slides in with slight tilt/parallel flourish) */}
+            {/* Selected Projects red cursive text (Slides in with slight tilt) */}
             <motion.img
-              initial={{ opacity: 0, scale: 0.8, y: 45, rotate: -4 }}
-              whileInView={{ opacity: 1, scale: 1, y: 48, rotate: 0 }}
-              viewport={{ once: true, amount: 0.3 }}
+              initial={{ opacity: 0, scale: 0.85, y: 30, rotate: -3 }}
+              whileInView={{ opacity: 1, scale: 1, y: 38, rotate: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
               transition={{
-                duration: 1.2,
-                delay: 0.2,
+                duration: 0.9,
+                delay: 0.15,
                 ease: [0.16, 1, 0.3, 1],
               }}
               src={selectedProjectsImg}
@@ -286,7 +283,7 @@ function ProjectsComponent() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. THE SCROLLING CARDS OVERLAY (PARALLEL X AXIS ANIMATION ENTRY)          */}
+      {/* 2. THE SCROLLING CARDS OVERLAY                                            */}
       {/* ========================================================================= */}
       <div className="relative z-20 w-full flex flex-col justify-end overflow-x-clip">
         {/* Spacer to reveal the pinned background first */}
@@ -296,7 +293,7 @@ function ProjectsComponent() {
         <div className="w-full min-h-screen bg-transparent relative z-30 pt-12 pb-32 px-4 sm:px-8 md:px-12">
           <div className="max-w-6xl mx-auto">
             
-            {/* 2 Projects Per Row Grid with Parallel X Entry Motion */}
+            {/* 2 Projects Per Row Grid with GPU-accelerated smooth entry */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
               {PROJECTS.map((project, idx) => (
                 <CinematicProjectCard key={project.id} project={project} idx={idx} />
