@@ -63,6 +63,10 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
   const marqueesContainerRef = useRef<HTMLDivElement>(null);
   const metadataRef = useRef<HTMLDivElement>(null);
 
+  // State for shake-to-reveal full color mode with 5s cooldown
+  const [isColorRevealed, setIsColorRevealed] = useState<boolean>(false);
+  const colorCooldownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // References for liquid reveal effect
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
@@ -392,9 +396,22 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
     }
   }, [revealHero]);
 
-  // Function to create an expanding fluid ink spread burst that reveals the full-color photo
+  // Function to create an expanding fluid ink spread burst and switch to full color
   const triggerFullRevealBurst = (x?: number, y?: number) => {
-    fullRevealUntilRef.current = Date.now() + 5000; // Keep full color revealed for 5 seconds with smooth fade
+    // Transition state from grayscale to full color
+    setIsColorRevealed(true);
+
+    // Clear existing timer if any
+    if (colorCooldownTimeoutRef.current) {
+      clearTimeout(colorCooldownTimeoutRef.current);
+    }
+
+    // Cooldown timer: stays colorful for 5 seconds before smoothly fading back to grayscale
+    colorCooldownTimeoutRef.current = setTimeout(() => {
+      setIsColorRevealed(false);
+    }, 5000);
+
+    fullRevealUntilRef.current = Date.now() + 5000;
     startCardLoop();
 
     const canvas = canvasRef.current;
@@ -423,6 +440,35 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
         }
       }
     }
+  };
+
+  // Explicit helper for iOS permission request & tap fallback
+  const handleCardTapOrPermission = async (clientX?: number, clientY?: number) => {
+    // 1. Trigger the color reveal immediately
+    playLiquidSplash(0.45);
+    triggerFullRevealBurst(clientX, clientY);
+
+    // 2. Request iOS sensor permissions on user tap if required
+    try {
+      if (
+        typeof DeviceMotionEvent !== "undefined" &&
+        typeof (DeviceMotionEvent as any).requestPermission === "function"
+      ) {
+        const res = await (DeviceMotionEvent as any).requestPermission();
+        if (res === "granted") {
+          // Attached by the effect
+        }
+      }
+    } catch {}
+
+    try {
+      if (
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof (DeviceOrientationEvent as any).requestPermission === "function"
+      ) {
+        await (DeviceOrientationEvent as any).requestPermission();
+      }
+    } catch {}
   };
 
   // Shake gesture detection & Gyroscope tilt for mobile devices
@@ -926,9 +972,8 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
         <div
           ref={showreelCardRef}
           onClick={(e) => {
-            playLiquidSplash(0.45);
             const rect = e.currentTarget.getBoundingClientRect();
-            triggerFullRevealBurst(e.clientX - rect.left, e.clientY - rect.top);
+            handleCardTapOrPermission(e.clientX - rect.left, e.clientY - rect.top);
           }}
           className="relative w-[270px] h-[390px] sm:w-[320px] sm:h-[460px] md:w-[400px] md:h-[550px] cursor-pointer group"
           style={{ perspective: "1000px", opacity: 0 }}
@@ -938,12 +983,16 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
             className="relative w-full h-full bg-[#111] border border-white/10 rounded-xl overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.9)] transition-all duration-300 group-hover:border-white/30"
             style={{ transformStyle: "preserve-3d" }}
           >
-            {/* Pure undisturbed card background portrait image */}
+            {/* Pure undisturbed card background portrait image - transitions between grayscale and full color */}
             <img
               ref={imageRef}
               src={navoImg}
               alt="Navodith"
-              className="w-full h-full object-cover object-center grayscale contrast-[1.15] brightness-[0.85] opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-[1.2s] ease-out"
+              className={`w-full h-full object-cover object-center transition-all duration-[1000ms] ease-out group-hover:scale-105 ${
+                isColorRevealed
+                  ? "grayscale-0 contrast-100 brightness-100 opacity-100"
+                  : "grayscale contrast-[1.15] brightness-[0.85] opacity-90 group-hover:opacity-100"
+              }`}
               referrerPolicy="no-referrer"
             />
             {/* Liquid Reveal Canvas */}
@@ -957,12 +1006,12 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
           <div 
             onClick={(e) => {
               e.stopPropagation();
-              triggerFullRevealBurst();
+              handleCardTapOrPermission();
             }}
             className="absolute -right-6 sm:-right-8 top-1/2 -translate-y-1/2 md:hidden text-white/35 hover:text-white/80 text-[8px] sm:text-[9px] font-mono tracking-[0.25em] uppercase select-none cursor-pointer transition-colors py-1 whitespace-nowrap z-20"
             style={{ writingMode: 'vertical-rl' }}
           >
-            <span>SHAKE OR TAP TO REVEAL</span>
+            <span>{isColorRevealed ? "COLOR REVEALED" : "SHAKE OR TAP TO REVEAL"}</span>
           </div>
         </div>
       </div>
