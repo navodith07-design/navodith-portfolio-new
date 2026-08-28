@@ -392,21 +392,21 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
     }
   }, [revealHero]);
 
-  // Function to create an expanding fluid ink spread burst that reveals the full-color photo for 10 seconds
+  // Function to create an expanding fluid ink spread burst that reveals the full-color photo
   const triggerFullRevealBurst = (x?: number, y?: number) => {
-    fullRevealUntilRef.current = Date.now() + 10000; // Keep full color revealed for 10 seconds!
+    fullRevealUntilRef.current = Date.now() + 5000; // Keep full color revealed for 5 seconds with smooth fade
     startCardLoop();
 
     const canvas = canvasRef.current;
     if (canvas) {
-      const w = canvas.clientWidth || 350;
-      const h = canvas.clientHeight || 480;
+      const w = canvas.clientWidth || 320;
+      const h = canvas.clientHeight || 450;
 
       const centerX = x !== undefined ? x : w / 2;
       const centerY = y !== undefined ? y : h / 2;
 
       for (let wave = 0; wave < 6; wave++) {
-        const count = 10 + wave * 4;
+        const count = 12 + wave * 4;
         const baseRadius = wave * 25;
         for (let i = 0; i < count; i++) {
           const angle = (i / count) * Math.PI * 2 + (wave * 0.15);
@@ -416,7 +416,7 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
             y: centerY + Math.sin(angle) * distance,
             radius: Math.random() * 30 + 40,
             life: 1.0,
-            decay: 0.0016, // ~10s particle lifetime matching full reveal duration
+            decay: 0.0035, // Smooth decay over ~5s
             vx: Math.cos(angle) * 1.0,
             vy: Math.sin(angle) * 1.0,
           });
@@ -425,7 +425,7 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
     }
   };
 
-  // Shake gesture detection for mobile, iPad, and tablet color reveal
+  // Shake gesture detection & Gyroscope tilt for mobile devices
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -433,10 +433,11 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
     let isInitialized = false;
     let lastTime = Date.now();
     let lastShakeTime = 0;
+    const SHAKE_COOLDOWN = 4500; // 4.5s cooldown between shakes matching reveal duration
 
     const handleDeviceMotion = (e: DeviceMotionEvent) => {
       try {
-        const acc = (e.acceleration && e.acceleration.x !== null) 
+        const acc = (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null))
           ? e.acceleration 
           : e.accelerationIncludingGravity;
         if (!acc) return;
@@ -444,7 +445,7 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
         const currentTime = Date.now();
         const diffTime = currentTime - lastTime;
 
-        if (diffTime > 60) {
+        if (diffTime > 50) {
           lastTime = currentTime;
           const x = acc.x || 0;
           const y = acc.y || 0;
@@ -458,16 +459,15 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
             return;
           }
 
-          const deltaX = x - lastX;
-          const deltaY = y - lastY;
-          const deltaZ = z - lastZ;
+          const deltaX = Math.abs(x - lastX);
+          const deltaY = Math.abs(y - lastY);
+          const deltaZ = Math.abs(z - lastZ);
+          const totalMovement = deltaX + deltaY + deltaZ;
 
-          // Compute magnitude of change vector
-          const change = Math.sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
-
-          // Threshold 6.5 m/s^2 allows responsive mobile shaking without false triggers
-          if (change > 6.5 && currentTime - lastShakeTime > 800) {
+          // Responsive shake detection with cooldown
+          if (totalMovement > 8.5 && currentTime - lastShakeTime > SHAKE_COOLDOWN) {
             lastShakeTime = currentTime;
+            playLiquidSplash(0.45);
             triggerFullRevealBurst();
           }
 
@@ -480,8 +480,60 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
       }
     };
 
+    // Gyroscope tilt interaction on mobile (mirroring mousemove tilt & liquid cursor)
+    const handleDeviceOrientation = (e: DeviceOrientationEvent) => {
+      const innerElement = showreelInnerRef.current;
+      if (!innerElement) return;
+
+      const gamma = e.gamma ?? 0; // Left-to-Right (-90 to 90)
+      const beta = e.beta ?? 45;  // Front-to-Back (-180 to 180, resting around 40-50 deg)
+
+      // Normalize around normal phone holding angle
+      const deltaBeta = Math.max(-35, Math.min(35, beta - 45));
+      const clampedGamma = Math.max(-35, Math.min(35, gamma));
+
+      const tiltX = (deltaBeta / 35) * -12;
+      const tiltY = (clampedGamma / 35) * 12;
+
+      gsap.to(innerElement, {
+        rotateX: tiltX,
+        rotateY: tiltY,
+        transformPerspective: 1000,
+        scale: 1.01,
+        duration: 0.35,
+        ease: "power2.out",
+        overwrite: "auto",
+      });
+
+      // Generate subtle fluid ripples from gyro tilt
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const w = cardCanvasSizeRef.current.w || canvas.clientWidth || 300;
+        const h = cardCanvasSizeRef.current.h || canvas.clientHeight || 420;
+        const cx = (w / 2) + (clampedGamma / 35) * (w * 0.38);
+        const cy = (h / 2) + (deltaBeta / 35) * (h * 0.38);
+
+        const now = performance.now();
+        if (now - lastPointerPushRef.current > 40) {
+          lastPointerPushRef.current = now;
+          startCardLoop();
+          if (trailRef.current.length < 25) {
+            trailRef.current.push({
+              x: cx + (Math.random() - 0.5) * 14,
+              y: cy + (Math.random() - 0.5) * 14,
+              radius: Math.random() * 30 + 80,
+              life: 1.0,
+              decay: 0.018,
+              vx: (Math.random() - 0.5) * 0.8,
+              vy: (Math.random() - 0.5) * 0.8,
+            });
+          }
+        }
+      }
+    };
+
     let permissionRequested = false;
-    const requestMotionPermission = () => {
+    const requestSensorPermissions = async () => {
       if (permissionRequested) return;
       permissionRequested = true;
 
@@ -490,22 +542,31 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
           typeof DeviceMotionEvent !== "undefined" &&
           typeof (DeviceMotionEvent as any).requestPermission === "function"
         ) {
-          (DeviceMotionEvent as any).requestPermission()
-            .then((response: string) => {
-              if (response === "granted") {
-                window.addEventListener("devicemotion", handleDeviceMotion, true);
-              }
-            })
-            .catch(() => {});
+          const res = await (DeviceMotionEvent as any).requestPermission();
+          if (res === "granted") {
+            window.addEventListener("devicemotion", handleDeviceMotion, true);
+          }
         } else {
           window.addEventListener("devicemotion", handleDeviceMotion, true);
         }
-      } catch {
-        // Ignore permission prompt restrictions
-      }
+      } catch {}
+
+      try {
+        if (
+          typeof DeviceOrientationEvent !== "undefined" &&
+          typeof (DeviceOrientationEvent as any).requestPermission === "function"
+        ) {
+          const res = await (DeviceOrientationEvent as any).requestPermission();
+          if (res === "granted") {
+            window.addEventListener("deviceorientation", handleDeviceOrientation, true);
+          }
+        } else {
+          window.addEventListener("deviceorientation", handleDeviceOrientation, true);
+        }
+      } catch {}
     };
 
-    // Attach listener directly if standard API, or wait for user touch on iOS/iPadOS
+    // Attach listeners directly for Android/standard browsers
     try {
       if (
         typeof DeviceMotionEvent !== "undefined" &&
@@ -515,20 +576,33 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
       }
     } catch {}
 
+    try {
+      if (
+        typeof DeviceOrientationEvent !== "undefined" &&
+        typeof (DeviceOrientationEvent as any).requestPermission !== "function"
+      ) {
+        window.addEventListener("deviceorientation", handleDeviceOrientation, true);
+      }
+    } catch {}
+
     const handleUserInteraction = () => {
-      requestMotionPermission();
+      requestSensorPermissions();
       window.removeEventListener("touchstart", handleUserInteraction);
+      window.removeEventListener("touchend", handleUserInteraction);
       window.removeEventListener("click", handleUserInteraction);
       window.removeEventListener("pointerdown", handleUserInteraction);
     };
 
     window.addEventListener("touchstart", handleUserInteraction, { passive: true });
+    window.addEventListener("touchend", handleUserInteraction, { passive: true });
     window.addEventListener("click", handleUserInteraction, { passive: true });
     window.addEventListener("pointerdown", handleUserInteraction, { passive: true });
 
     return () => {
       window.removeEventListener("devicemotion", handleDeviceMotion, true);
+      window.removeEventListener("deviceorientation", handleDeviceOrientation, true);
       window.removeEventListener("touchstart", handleUserInteraction);
+      window.removeEventListener("touchend", handleUserInteraction);
       window.removeEventListener("click", handleUserInteraction);
       window.removeEventListener("pointerdown", handleUserInteraction);
     };
@@ -856,7 +930,7 @@ function HeroComponent({ isParentLoading = true, revealHero = false }: HeroProps
             const rect = e.currentTarget.getBoundingClientRect();
             triggerFullRevealBurst(e.clientX - rect.left, e.clientY - rect.top);
           }}
-          className="relative w-[210px] h-[310px] sm:w-[300px] sm:h-[430px] md:w-[400px] md:h-[550px] cursor-pointer group"
+          className="relative w-[270px] h-[390px] sm:w-[320px] sm:h-[460px] md:w-[400px] md:h-[550px] cursor-pointer group"
           style={{ perspective: "1000px", opacity: 0 }}
         >
           <div
