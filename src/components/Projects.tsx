@@ -49,27 +49,18 @@ const PROJECTS: Project[] = [
     video: salletVideo,
     tags: ["SEAFOOD CUISINE", "WEB EXPERIENCE", "INTERACTIVE MENU"],
     link: "https://navodith07-design.github.io/sallet-al-sayad-live/"
-  },
-  {
-    id: "proj-4",
-    title: "SYNAPSE CANVAS",
-    category: "Cognitive Neural Mapper",
-    year: "2024",
-    image: "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&w=1400&q=85",
-    tags: ["SPATIAL UI", "AI WORKFLOW"],
-    link: "#"
   }
 ];
 
 interface ProjectCardProps {
   project: Project;
   idx: number;
+  total: number;
 }
 
-const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, idx }) => {
+const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, idx, total }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isHovered, setIsHovered] = React.useState(false);
-  const isEvenCol = idx % 2 === 0;
 
   const handleMouseEnter = () => {
     setIsHovered(true);
@@ -97,120 +88,127 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
   };
 
   return (
-    <motion.a
-      initial={{ opacity: 0, y: 35 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.08, margin: "0px 0px -50px 0px" }}
-      transition={{
-        duration: 0.7,
-        delay: (idx % 2) * 0.08,
-        ease: [0.22, 1, 0.36, 1],
+    <div
+      style={{
+        top: `calc(4.5rem + ${idx * 20}px)`,
+        zIndex: idx + 10,
       }}
-      href={project.link}
-      target={project.link?.startsWith("http") ? "_blank" : undefined}
-      rel={project.link?.startsWith("http") ? "noopener noreferrer" : undefined}
-      onClick={handleClick}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      className="group relative flex flex-col rounded-3xl bg-white/[0.06] hover:bg-white/[0.12] backdrop-blur-xl md:backdrop-blur-2xl border border-white/20 hover:border-white/50 transition-all duration-300 ease-out shadow-[0_8px_32px_0_rgba(0,0,0,0.6),inset_0_1px_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_20px_60px_0_rgba(0,0,0,0.8),inset_0_1px_2px_0_rgba(255,255,255,0.45)] hover:scale-[1.02] overflow-hidden cursor-pointer transform-gpu"
+      className="sticky w-full max-w-3xl lg:max-w-4xl mx-auto mb-10 sm:mb-16 last:mb-0"
     >
-      {/* Specular Liquid Glass Top Rim Light & Prismatic Highlights */}
-      <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none z-30" />
-      <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-white/10 via-white/80 to-white/10 pointer-events-none z-30" />
+      <motion.a
+        initial={{ opacity: 0, y: 40 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.1 }}
+        transition={{
+          duration: 0.7,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        href={project.link}
+        target={project.link?.startsWith("http") ? "_blank" : undefined}
+        rel={project.link?.startsWith("http") ? "noopener noreferrer" : undefined}
+        onClick={handleClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="group relative flex flex-col rounded-3xl bg-neutral-900/80 hover:bg-neutral-900/95 backdrop-blur-2xl border border-white/20 hover:border-white/50 transition-all duration-300 ease-out shadow-[0_16px_40px_0_rgba(0,0,0,0.8),inset_0_1px_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_24px_64px_0_rgba(0,0,0,0.9),inset_0_1px_2px_0_rgba(255,255,255,0.45)] hover:scale-[1.01] overflow-hidden cursor-pointer transform-gpu"
+      >
+        {/* Specular Liquid Glass Top Rim Light & Prismatic Highlights */}
+        <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none z-30" />
+        <div className="absolute top-0 left-4 right-4 h-[1px] bg-gradient-to-r from-white/10 via-white/80 to-white/10 pointer-events-none z-30" />
 
-      {/* Ambient Liquid Sheen Overlay with Refraction Angles */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.12] via-white/[0.03] to-transparent pointer-events-none z-20 opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
-      
-      {/* Subtle Liquid Prismatic Glow Flare */}
-      <div className="absolute -top-24 -right-24 w-52 h-52 bg-white/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-amber-300/15 transition-all duration-500 pointer-events-none" />
-
-      {/* ========================================================================= */}
-      {/* MEDIA FRAME (Layered Video + Cover Image + Glass Overlays)                */}
-      {/* ========================================================================= */}
-      <div className="relative w-[calc(100%-16px)] mx-auto mt-2 aspect-[16/10] overflow-hidden rounded-2xl bg-black/60 border border-white/10 shadow-inner z-10">
+        {/* Ambient Liquid Sheen Overlay with Refraction Angles */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/[0.12] via-white/[0.03] to-transparent pointer-events-none z-20 opacity-80 group-hover:opacity-100 transition-opacity duration-300" />
         
-        {/* BOTTOM LAYER: Video Player (Instant Preload & Zero Latency Playback) */}
-        {project.video ? (
-          <video
-            ref={videoRef}
-            src={project.video}
-            muted
-            loop
-            playsInline
-            preload="auto"
-            className={`absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-300 ${
-              isHovered ? "opacity-100" : "opacity-0"
+        {/* Subtle Liquid Prismatic Glow Flare */}
+        <div className="absolute -top-24 -right-24 w-52 h-52 bg-white/15 rounded-full blur-3xl group-hover:scale-150 group-hover:bg-amber-300/15 transition-all duration-500 pointer-events-none" />
+
+        {/* ========================================================================= */}
+        {/* MEDIA FRAME (Layered Video + Cover Image + Glass Overlays)                */}
+        {/* ========================================================================= */}
+        <div className="relative w-[calc(100%-16px)] sm:w-[calc(100%-24px)] mx-auto mt-2 sm:mt-3 aspect-[16/10] sm:aspect-[16/9] overflow-hidden rounded-2xl bg-black/70 border border-white/10 shadow-inner z-10">
+          
+          {/* BOTTOM LAYER: Video Player (Instant Preload & Zero Latency Playback) */}
+          {project.video ? (
+            <video
+              ref={videoRef}
+              src={project.video}
+              muted
+              loop
+              playsInline
+              preload="auto"
+              className={`absolute inset-0 w-full h-full object-cover z-0 pointer-events-none transition-opacity duration-300 ${
+                isHovered ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          ) : (
+            <div className="absolute inset-0 bg-black/80 z-0" />
+          )}
+
+          {/* MIDDLE LAYER: Static Cover Image */}
+          <img
+            src={project.image}
+            alt={project.title}
+            loading="lazy"
+            className={`absolute inset-0 w-full h-full object-cover z-10 transition-all duration-300 ease-out pointer-events-none select-none ${
+              project.video && isHovered ? "opacity-0 scale-105" : "opacity-100 scale-100"
             }`}
+            referrerPolicy="no-referrer"
           />
-        ) : (
-          <div className="absolute inset-0 bg-black/80 z-0" />
-        )}
 
-        {/* MIDDLE LAYER: Static Cover Image */}
-        <img
-          src={project.image}
-          alt={project.title}
-          loading="lazy"
-          className={`absolute inset-0 w-full h-full object-cover z-10 transition-all duration-300 ease-out pointer-events-none select-none ${
-            project.video && isHovered ? "opacity-0 scale-105" : "opacity-100 scale-100"
-          }`}
-          referrerPolicy="no-referrer"
-        />
+          {/* Ambient Dark Gradient for Legibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-70 group-hover:opacity-40 transition-opacity duration-300 z-15 pointer-events-none" />
 
-        {/* Ambient Dark Gradient for Legibility */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-70 group-hover:opacity-40 transition-opacity duration-300 z-15 pointer-events-none" />
-
-        {/* TOP LAYER: Liquid Glass Index Badge */}
-        <div className="absolute top-3 left-3 z-30 pointer-events-none">
-          <span className="font-mono font-bold text-[10px] text-amber-300 bg-black/50 backdrop-blur-md border border-white/25 px-2.5 py-1 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)]">
-            0{idx + 1}
-          </span>
-        </div>
-
-        {/* TOP LAYER: Liquid Glass Floating Action Button (Arrow) */}
-        <div 
-          onMouseEnter={(e) => {
-            e.stopPropagation();
-            playAirDisplacement(0.16);
-          }}
-          className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-white/35 text-white flex items-center justify-center font-bold text-xs shadow-[0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] group-hover:bg-amber-400 group-hover:text-black group-hover:rotate-45 transition-all duration-300 z-30"
-        >
-          <ArrowUpRight size={14} />
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* TOP LAYER: Content UI Layer (Title, Category, Tags)                       */}
-      {/* ========================================================================= */}
-      <div className="p-5 sm:p-6 flex flex-col gap-2 relative z-30">
-        <div className="flex items-center justify-between text-white/55 font-mono text-[11px]">
-          <span className="uppercase tracking-wider truncate">{project.category}</span>
-          <span className="shrink-0 text-white/40">{project.year}</span>
-        </div>
-
-        <h3 className="font-display font-bold text-xl sm:text-2xl text-white group-hover:text-amber-300 transition-colors tracking-tight">
-          {project.title}
-        </h3>
-
-        {/* Frosted Glass Tag Pills */}
-        {project.tags && project.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
-            {project.tags.slice(0, 2).map((tag) => (
-              <span
-                key={tag}
-                onMouseEnter={(e) => {
-                  e.stopPropagation();
-                  playAirDisplacement(0.11);
-                }}
-                className="font-mono text-[9px] bg-white/[0.08] hover:bg-white/[0.18] backdrop-blur-md border border-white/20 hover:border-white/40 text-white/90 hover:text-white px-2.5 py-0.5 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-200"
-              >
-                {tag}
-              </span>
-            ))}
+          {/* TOP LAYER: Liquid Glass Index Badge */}
+          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 pointer-events-none">
+            <span className="font-mono font-bold text-[10px] sm:text-[11px] text-amber-300 bg-black/60 backdrop-blur-md border border-white/25 px-3 py-1 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)]">
+              0{idx + 1} / 0{total}
+            </span>
           </div>
-        )}
-      </div>
-    </motion.a>
+
+          {/* TOP LAYER: Liquid Glass Floating Action Button (Arrow) */}
+          <div 
+            onMouseEnter={(e) => {
+              e.stopPropagation();
+              playAirDisplacement(0.16);
+            }}
+            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/35 text-white flex items-center justify-center font-bold text-sm shadow-[0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] group-hover:bg-amber-400 group-hover:text-black group-hover:rotate-45 transition-all duration-300 z-30"
+          >
+            <ArrowUpRight size={16} />
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* TOP LAYER: Content UI Layer (Title, Category, Tags)                       */}
+        {/* ========================================================================= */}
+        <div className="p-5 sm:p-7 flex flex-col gap-2 sm:gap-2.5 relative z-30">
+          <div className="flex items-center justify-between text-white/55 font-mono text-[11px] sm:text-xs">
+            <span className="uppercase tracking-wider truncate">{project.category}</span>
+            <span className="shrink-0 text-white/40">{project.year}</span>
+          </div>
+
+          <h3 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-white group-hover:text-amber-300 transition-colors tracking-tight">
+            {project.title}
+          </h3>
+
+          {/* Frosted Glass Tag Pills */}
+          {project.tags && project.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2 pt-1.5">
+              {project.tags.map((tag) => (
+                <span
+                  key={tag}
+                  onMouseEnter={(e) => {
+                    e.stopPropagation();
+                    playAirDisplacement(0.11);
+                  }}
+                  className="font-mono text-[9px] sm:text-[10px] bg-white/[0.08] hover:bg-white/[0.18] backdrop-blur-md border border-white/20 hover:border-white/40 text-white/90 hover:text-white px-3 py-1 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-200"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </motion.a>
+    </div>
   );
 });
 
@@ -289,14 +287,19 @@ function ProjectsComponent() {
         {/* Spacer to reveal the pinned background first */}
         <div className="w-full h-screen bg-transparent pointer-events-none"></div>
 
-        {/* 2-Column Grid Container */}
+        {/* Single-Column Sticky Stack Container */}
         <div className="w-full min-h-screen bg-transparent relative z-30 pt-12 pb-32 px-4 sm:px-8 md:px-12">
-          <div className="max-w-6xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             
-            {/* 2 Projects Per Row Grid with GPU-accelerated smooth entry */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
+            {/* Single Column Sticky Scroll Stack */}
+            <div className="flex flex-col items-center w-full">
               {PROJECTS.map((project, idx) => (
-                <CinematicProjectCard key={project.id} project={project} idx={idx} />
+                <CinematicProjectCard 
+                  key={project.id} 
+                  project={project} 
+                  idx={idx} 
+                  total={PROJECTS.length} 
+                />
               ))}
             </div>
 
@@ -304,7 +307,7 @@ function ProjectsComponent() {
             <div 
               className="flex items-center justify-between w-full pt-16 border-t border-white/10 font-mono text-[10px] text-white/35 hover:text-white/60 transition-colors uppercase tracking-widest mt-16 cursor-default"
             >
-              <span>INDEX // 04 PROJECTS</span>
+              <span>INDEX // 03 PROJECTS</span>
               <span>NAVODITH © 2026</span>
             </div>
 
