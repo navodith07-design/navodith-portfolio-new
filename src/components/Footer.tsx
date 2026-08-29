@@ -3,12 +3,12 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowUp, Mail, Check, Copy } from "lucide-react";
 import { playHarmonicChime, playHoverTick, playWhoosh, playClickPop } from "../utils/sound";
+import ParticleText from "./ParticleText";
 
 gsap.registerPlugin(ScrollTrigger);
 
 function FooterComponent() {
   const footerRef = useRef<HTMLElement>(null);
-  const headingRef = useRef<HTMLHeadingElement>(null);
   const emailButtonRef = useRef<HTMLAnchorElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -44,127 +44,6 @@ function FooterComponent() {
     }, footerRef);
 
     return () => ctx.revert();
-  }, []);
-
-  // Crazy 3D kinetic character reveal and magnetic liquid wave on heading
-  useEffect(() => {
-    const heading = headingRef.current;
-    if (!heading) return;
-
-    const chars = heading.querySelectorAll(".char-item");
-
-    // Initial state setup for reveal
-    gsap.set(chars, {
-      y: 110,
-      rotateX: -90,
-      opacity: 0,
-      transformOrigin: "50% 100% -50px",
-    });
-
-    // Crazy ScrollTrigger entrance reveal animation
-    const trigger = ScrollTrigger.create({
-      trigger: heading,
-      start: "top 85%",
-      onEnter: () => {
-        gsap.to(chars, {
-          y: 0,
-          rotateX: 0,
-          opacity: 1,
-          duration: 1.1,
-          stagger: 0.035,
-          ease: "back.out(1.7)",
-        });
-      },
-      once: true,
-    });
-
-    // Refined, elegant monochromatic kinetic wave over characters with cached metrics
-    let charCenters: { el: HTMLElement; x: number; y: number }[] = [];
-
-    const cacheCharCenters = () => {
-      charCenters = (Array.from(chars) as HTMLElement[]).map((char) => {
-        const charRect = char.getBoundingClientRect();
-        return {
-          el: char,
-          x: charRect.left + charRect.width / 2,
-          y: charRect.top + charRect.height / 2,
-        };
-      });
-    };
-
-    const handleMouseEnter = () => {
-      cacheCharCenters();
-    };
-
-    let lastMoveTime = 0;
-    const handleMouseMove = (e: MouseEvent) => {
-      const now = performance.now();
-      if (now - lastMoveTime < 16) return; // Cap at 60fps
-      lastMoveTime = now;
-
-      const mouseX = e.clientX;
-      const mouseY = e.clientY;
-
-      if (!charCenters.length) cacheCharCenters();
-
-      charCenters.forEach((item) => {
-        const dist = Math.hypot(mouseX - item.x, mouseY - item.y);
-        const maxDist = 150;
-
-        if (dist < maxDist) {
-          const intensity = Math.pow(1 - dist / maxDist, 2);
-          gsap.to(item.el, {
-            y: -12 * intensity,
-            rotateY: (mouseX - item.x) * 0.08 * intensity,
-            scale: 1 + 0.08 * intensity,
-            color: "#ffffff",
-            textShadow: intensity > 0.2 ? `0 0 ${20 * intensity}px rgba(255,255,255,${0.35 * intensity})` : "none",
-            duration: 0.25,
-            ease: "power2.out",
-            overwrite: "auto",
-          });
-        } else {
-          gsap.to(item.el, {
-            y: 0,
-            rotateY: 0,
-            rotateX: 0,
-            scale: 1,
-            color: "#ffffff",
-            textShadow: "none",
-            duration: 0.4,
-            ease: "power3.out",
-            overwrite: "auto",
-          });
-        }
-      });
-    };
-
-    const handleMouseLeave = () => {
-      charCenters = [];
-      gsap.to(chars, {
-        y: 0,
-        rotateY: 0,
-        rotateX: 0,
-        scale: 1,
-        color: "#ffffff",
-        textShadow: "none",
-        duration: 0.5,
-        ease: "power3.out",
-        stagger: 0.01,
-        overwrite: "auto",
-      });
-    };
-
-    heading.addEventListener("mouseenter", handleMouseEnter, { passive: true });
-    heading.addEventListener("mousemove", handleMouseMove, { passive: true });
-    heading.addEventListener("mouseleave", handleMouseLeave, { passive: true });
-
-    return () => {
-      trigger.kill();
-      heading.removeEventListener("mouseenter", handleMouseEnter);
-      heading.removeEventListener("mousemove", handleMouseMove);
-      heading.removeEventListener("mouseleave", handleMouseLeave);
-    };
   }, []);
 
   // Magnetic button effect on the massive email CTA button using GSAP
@@ -223,41 +102,44 @@ function FooterComponent() {
       {/* Specular Ambient Edge Light */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 max-w-4xl h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center items-center gap-12 sm:gap-16">
+      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center items-center gap-10 sm:gap-14">
         
         {/* Section Metadata Title */}
         <span className="font-mono text-xs tracking-[0.25em] text-white/40 uppercase self-start">
           CONNECT
         </span>
 
-        {/* Massive Dynamic Contact Callout */}
-        <div className="text-center flex flex-col items-center max-w-5xl gap-8 my-auto select-none">
+        {/* Massive Dynamic Contact Callout with ParticleText */}
+        <div className="w-full text-center flex flex-col items-center max-w-5xl gap-6 my-auto select-none">
           <h2
-            ref={headingRef}
-            className="display-heavy text-4xl sm:text-6xl md:text-7xl lg:text-8xl tracking-tight text-white leading-none uppercase text-center cursor-pointer py-4"
-            style={{ perspective: "1000px" }}
+            className="w-full flex items-center justify-center cursor-pointer min-h-[180px] sm:min-h-[220px] md:min-h-[260px]"
           >
-            {text.split(" ").map((word, wordIdx) => (
-              <span key={wordIdx} className="inline-block whitespace-nowrap mr-[0.3em] overflow-hidden py-2">
-                {word.split("").map((char, charIdx) => (
-                  <span
-                    key={charIdx}
-                    onMouseEnter={() => playHoverTick(0.12, 1.4)}
-                    className="char-item inline-block transition-colors duration-150"
-                    style={{ willChange: "transform, opacity, color, text-shadow" }}
-                  >
-                    {char}
-                  </span>
-                ))}
-              </span>
-            ))}
+            <ParticleText
+              text={text}
+              particleSize={2.2}
+              density={3}
+              color="#ffffff"
+              highlightColor="#ffffff"
+              scatter={170}
+              gatherDuration={1500}
+              stagger={380}
+              pointerRepel={32}
+              repelRadius={120}
+              idleDrift={0.6}
+              trigger="view"
+              fontSize="clamp(2.4rem, 6.2vw, 5.2rem)"
+              fontWeight={800}
+              fontFamily="inherit"
+              glow={true}
+              className="w-full"
+            />
           </h2>
-          <p className="font-sans text-sm md:text-base text-white/50 max-w-lg mx-auto">
+          <p className="font-sans text-sm md:text-base text-white/50 max-w-lg mx-auto -mt-2">
             Seeking collaborations, custom UI/UX design systems, interaction consultations, or advanced digital product engineering.
           </p>
 
           {/* Magnetic High-Contrast Email CTA */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 mt-6">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
             <a
               ref={emailButtonRef}
               href="mailto:navodith07@gmail.com"

@@ -38,7 +38,7 @@ const PROJECTS: Project[] = [
     image: lawCardImg,
     video: lawSiteVid,
     tags: ["LEGAL ARCHITECTURE", "EDITORIAL DESIGN", "WEB EXPERIENCE"],
-    link: "https://lawsamplesite.netlify.app/"
+    link: "https://carter-legals.vercel.app/"
   },
   {
     id: "proj-3",
@@ -90,17 +90,17 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
   return (
     <div
       style={{
-        top: `calc(4.5rem + ${idx * 20}px)`,
+        top: `calc(max(4.5rem, calc((100vh - 490px) / 2)) + ${idx * 22}px)`,
         zIndex: idx + 10,
       }}
-      className="sticky w-full max-w-3xl lg:max-w-4xl mx-auto mb-10 sm:mb-16 last:mb-0"
+      className="sticky w-full max-w-xl md:max-w-2xl lg:max-w-[700px] mx-auto mb-24 sm:mb-32 md:mb-40 last:mb-0"
     >
       <motion.a
-        initial={{ opacity: 0, y: 40 }}
+        initial={{ opacity: 0, y: 35 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.1 }}
         transition={{
-          duration: 0.7,
+          duration: 0.65,
           ease: [0.22, 1, 0.36, 1],
         }}
         href={project.link}
@@ -109,7 +109,7 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
         onClick={handleClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="group relative flex flex-col rounded-3xl bg-neutral-900/80 hover:bg-neutral-900/95 backdrop-blur-2xl border border-white/20 hover:border-white/50 transition-all duration-300 ease-out shadow-[0_16px_40px_0_rgba(0,0,0,0.8),inset_0_1px_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_24px_64px_0_rgba(0,0,0,0.9),inset_0_1px_2px_0_rgba(255,255,255,0.45)] hover:scale-[1.01] overflow-hidden cursor-pointer transform-gpu"
+        className="group relative flex flex-col rounded-2xl sm:rounded-3xl bg-neutral-900/85 hover:bg-neutral-900/95 backdrop-blur-2xl border border-white/20 hover:border-white/50 transition-all duration-300 ease-out shadow-[0_20px_50px_rgba(0,0,0,0.85),inset_0_1px_1px_0_rgba(255,255,255,0.25)] hover:shadow-[0_28px_70px_0_rgba(0,0,0,0.95),inset_0_1px_2px_0_rgba(255,255,255,0.45)] hover:scale-[1.01] overflow-hidden cursor-pointer transform-gpu"
       >
         {/* Specular Liquid Glass Top Rim Light & Prismatic Highlights */}
         <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/70 to-transparent pointer-events-none z-30" />
@@ -124,7 +124,7 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
         {/* ========================================================================= */}
         {/* MEDIA FRAME (Layered Video + Cover Image + Glass Overlays)                */}
         {/* ========================================================================= */}
-        <div className="relative w-[calc(100%-16px)] sm:w-[calc(100%-24px)] mx-auto mt-2 sm:mt-3 aspect-[16/10] sm:aspect-[16/9] overflow-hidden rounded-2xl bg-black/70 border border-white/10 shadow-inner z-10">
+        <div className="relative w-[calc(100%-14px)] sm:w-[calc(100%-20px)] mx-auto mt-2 sm:mt-2.5 aspect-[16/9] max-h-[250px] sm:max-h-[290px] overflow-hidden rounded-xl sm:rounded-2xl bg-black/70 border border-white/10 shadow-inner z-10">
           
           {/* BOTTOM LAYER: Video Player (Instant Preload & Zero Latency Playback) */}
           {project.video ? (
@@ -158,8 +158,8 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-70 group-hover:opacity-40 transition-opacity duration-300 z-15 pointer-events-none" />
 
           {/* TOP LAYER: Liquid Glass Index Badge */}
-          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 pointer-events-none">
-            <span className="font-mono font-bold text-[10px] sm:text-[11px] text-amber-300 bg-black/60 backdrop-blur-md border border-white/25 px-3 py-1 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)]">
+          <div className="absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30 pointer-events-none">
+            <span className="font-mono font-bold text-[9px] sm:text-[10px] text-amber-300 bg-black/60 backdrop-blur-md border border-white/25 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.2)]">
               0{idx + 1} / 0{total}
             </span>
           </div>
@@ -170,28 +170,28 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
               e.stopPropagation();
               playAirDisplacement(0.16);
             }}
-            className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/35 text-white flex items-center justify-center font-bold text-sm shadow-[0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] group-hover:bg-amber-400 group-hover:text-black group-hover:rotate-45 transition-all duration-300 z-30"
+            className="absolute bottom-2.5 right-2.5 sm:bottom-3.5 sm:right-3.5 w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-white/20 backdrop-blur-md border border-white/35 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-[0_4px_16px_rgba(0,0,0,0.4),inset_0_1px_1px_rgba(255,255,255,0.3)] group-hover:bg-amber-400 group-hover:text-black group-hover:rotate-45 transition-all duration-300 z-30"
           >
-            <ArrowUpRight size={16} />
+            <ArrowUpRight size={15} />
           </div>
         </div>
 
         {/* ========================================================================= */}
         {/* TOP LAYER: Content UI Layer (Title, Category, Tags)                       */}
         {/* ========================================================================= */}
-        <div className="p-5 sm:p-7 flex flex-col gap-2 sm:gap-2.5 relative z-30">
-          <div className="flex items-center justify-between text-white/55 font-mono text-[11px] sm:text-xs">
+        <div className="p-4 sm:p-5 sm:px-6 flex flex-col gap-1.5 sm:gap-2 relative z-30">
+          <div className="flex items-center justify-between text-white/55 font-mono text-[10px] sm:text-[11px]">
             <span className="uppercase tracking-wider truncate">{project.category}</span>
             <span className="shrink-0 text-white/40">{project.year}</span>
           </div>
 
-          <h3 className="font-display font-bold text-2xl sm:text-3xl lg:text-4xl text-white group-hover:text-amber-300 transition-colors tracking-tight">
+          <h3 className="font-display font-bold text-xl sm:text-2xl md:text-3xl text-white group-hover:text-amber-300 transition-colors tracking-tight">
             {project.title}
           </h3>
 
           {/* Frosted Glass Tag Pills */}
           {project.tags && project.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 pt-1.5">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 pt-1">
               {project.tags.map((tag) => (
                 <span
                   key={tag}
@@ -199,7 +199,7 @@ const CinematicProjectCard: React.FC<ProjectCardProps> = React.memo(({ project, 
                     e.stopPropagation();
                     playAirDisplacement(0.11);
                   }}
-                  className="font-mono text-[9px] sm:text-[10px] bg-white/[0.08] hover:bg-white/[0.18] backdrop-blur-md border border-white/20 hover:border-white/40 text-white/90 hover:text-white px-3 py-1 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-200"
+                  className="font-mono text-[9px] sm:text-[10px] bg-white/[0.08] hover:bg-white/[0.18] backdrop-blur-md border border-white/20 hover:border-white/40 text-white/90 hover:text-white px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-md shadow-[0_2px_8px_rgba(0,0,0,0.3),inset_0_1px_1px_rgba(255,255,255,0.15)] transition-all duration-200"
                 >
                   {tag}
                 </span>

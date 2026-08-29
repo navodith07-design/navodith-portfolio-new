@@ -14,6 +14,7 @@ import {
   Palette
 } from "lucide-react";
 import OptionWheel, { playTactileClick } from "./OptionWheel";
+import ZeroGravityTools from "./ZeroGravityTools";
 import { playHoverTick, playClickPop } from "../utils/sound";
 import {
   FigmaIcon,
@@ -246,7 +247,6 @@ export const KNOWN_TOOLS: ToolItem[] = [
 
 function ExpertiseComponent() {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
-  const [toolCategoryFilter, setToolCategoryFilter] = useState<string>("all");
   const [currentSlide, setCurrentSlide] = useState<number>(0);
 
   const selectedSkill = SKILLS[selectedIndex];
@@ -268,9 +268,12 @@ function ExpertiseComponent() {
       };
 
       const isMobile = window.innerWidth < 768;
-      const pinDistance = isMobile
-        ? Math.max(window.innerHeight * 1.0, 800)
-        : Math.max(window.innerHeight * 1.4, 1200);
+      if (isMobile) {
+        // On mobile: no pinning or horizontal scroll translation; natural vertical flow
+        return;
+      }
+
+      const pinDistance = Math.max(window.innerHeight * 1.4, 1200);
 
       const tl = gsap.timeline({
         scrollTrigger: {
@@ -288,9 +291,9 @@ function ExpertiseComponent() {
       });
 
       // Buffer at start
-      tl.to({}, { duration: 0.1 });
+      tl.to({}, { duration: 0.15 });
 
-      // Smooth horizontal pan
+      // Smooth horizontal pan on desktop
       tl.to(track, {
         x: () => -getScrollAmount(),
         ease: "none",
@@ -299,7 +302,7 @@ function ExpertiseComponent() {
       });
 
       // Buffer at end
-      tl.to({}, { duration: 0.1 });
+      tl.to({}, { duration: 0.15 });
 
     }, sectionRef);
 
@@ -307,12 +310,6 @@ function ExpertiseComponent() {
       ctx.revert();
     };
   }, []);
-
-  // Filter tools based on category
-  const filteredTools = KNOWN_TOOLS.filter((tool) => {
-    if (toolCategoryFilter === "all") return true;
-    return tool.category === toolCategoryFilter;
-  });
 
   return (
     <section
@@ -334,8 +331,8 @@ function ExpertiseComponent() {
           </h2>
         </div>
 
-        {/* Horizontal Navigation Indicators */}
-        <div className="flex items-center gap-3">
+        {/* Horizontal Navigation Indicators (Desktop Only) */}
+        <div className="hidden md:flex items-center gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/5 border border-black/10 text-xs font-mono">
             <span className={`transition-colors duration-300 ${currentSlide === 0 ? "font-bold text-black" : "text-black/40"}`}>
               01 DISCIPLINES
@@ -345,28 +342,28 @@ function ExpertiseComponent() {
               02 KNOWN TOOLS
             </span>
           </div>
-          <div className="hidden sm:flex items-center gap-1.5 text-xs font-mono text-black/40">
+          <div className="flex items-center gap-1.5 text-xs font-mono text-black/40">
             <span>SCROLL TO EXPLORE</span>
             <ArrowRight size={13} className="animate-pulse text-black/60" />
           </div>
         </div>
       </div>
 
-      {/* HORIZONTAL PINNED TRACK */}
-      <div className="w-full overflow-hidden flex-1 relative z-10 py-2 sm:py-4 flex items-center">
+      {/* TRACK CONTAINER: Natural vertical flow on mobile, pinned horizontal track on desktop */}
+      <div className="w-full md:overflow-hidden flex-1 relative z-10 py-4 sm:py-6 md:py-4 px-0 md:flex md:items-center">
         <div
           ref={trackRef}
-          className="flex flex-nowrap w-[200vw] min-w-[200vw] items-start"
+          className="flex flex-col md:flex-row md:flex-nowrap w-full md:w-[200vw] md:min-w-[200vw] items-start gap-12 md:gap-0"
           style={{ willChange: "transform" }}
         >
           {/* ========================================================== */}
           {/* SLIDE 1: CORE DISCIPLINES (Option Wheel + Dynamic Details) */}
           {/* ========================================================== */}
-          <div className="w-[100vw] min-w-[100vw] shrink-0 flex flex-col justify-center">
-            <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-8 items-start">
+          <div className="w-full md:w-[100vw] md:min-w-[100vw] shrink-0 flex flex-col justify-center">
+            <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 md:px-12 grid grid-cols-1 md:grid-cols-12 gap-4 sm:gap-6 md:gap-8 items-start">
               
               {/* Left Column: Interactive OptionWheel */}
-              <div className="md:col-span-5 flex flex-col items-start w-full gap-2.5">
+              <div className="md:col-span-5 flex flex-col items-start w-full gap-2">
                 {/* Top Wheel Controller Bar */}
                 <div className="flex items-center justify-between text-xs font-mono text-black/50 tracking-wider uppercase px-1 w-full">
                   <span className="flex items-center gap-1.5">
@@ -379,9 +376,9 @@ function ExpertiseComponent() {
                 </div>
 
                 {/* Option Wheel Outer Glass Frame */}
-                <div className="relative w-full h-[240px] sm:h-[300px] md:h-[360px] rounded-2xl bg-white/45 backdrop-blur-xl border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)] hover:border-white transition-all duration-300 overflow-hidden flex items-center justify-center p-2">
+                <div className="relative w-full h-[190px] xs:h-[220px] sm:h-[280px] md:h-[360px] rounded-2xl bg-white/45 backdrop-blur-xl border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)] hover:border-white transition-all duration-300 overflow-hidden flex items-center justify-center p-2">
                   {/* Active Selection Indicator Box */}
-                  <div className="absolute inset-x-3 top-1/2 -translate-y-1/2 h-12 sm:h-14 rounded-xl bg-gradient-to-b from-white/80 via-white/55 to-white/70 backdrop-blur-md border border-white/95 shadow-[inset_0_1.5px_2px_rgba(255,255,255,1),0_8px_25px_-5px_rgba(0,0,0,0.08)] pointer-events-none z-0 overflow-hidden">
+                  <div className="absolute inset-x-3 top-1/2 -translate-y-1/2 h-11 sm:h-14 rounded-xl bg-gradient-to-b from-white/80 via-white/55 to-white/70 backdrop-blur-md border border-white/95 shadow-[inset_0_1.5px_2px_rgba(255,255,255,1),0_8px_25px_-5px_rgba(0,0,0,0.08)] pointer-events-none z-0 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-80" />
                   </div>
 
@@ -423,14 +420,14 @@ function ExpertiseComponent() {
                     textColor="#777777"
                     activeColor="#0f0f0f"
                     side="left"
-                    fontSize={1.85}
+                    fontSize={1.75}
                     spacing={1.3}
                     curve={1.1}
                     tilt={6.5}
                     blur={1.5}
                     fade={0.3}
                     smoothing={180}
-                    inset={18}
+                    inset={16}
                     loop={false}
                     draggable={true}
                     enableWheel={false}
@@ -442,7 +439,7 @@ function ExpertiseComponent() {
               </div>
 
               {/* Right Column: Dynamic Details */}
-              <div className="md:col-span-7 w-full h-auto min-h-[280px] sm:min-h-[300px] md:min-h-[360px] flex flex-col justify-between bg-white/45 backdrop-blur-xl rounded-2xl p-5 sm:p-7 border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)]">
+              <div className="md:col-span-7 w-full h-auto min-h-[260px] sm:min-h-[300px] md:min-h-[360px] flex flex-col justify-between bg-white/45 backdrop-blur-xl rounded-2xl p-4 sm:p-6 md:p-7 border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)]">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={selectedSkill.id}
@@ -450,30 +447,30 @@ function ExpertiseComponent() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex flex-col gap-4 w-full justify-between h-full"
+                    className="flex flex-col gap-3 sm:gap-4 w-full justify-between h-full"
                   >
                     <div>
-                      <span className="font-mono text-xs tracking-[0.2em] text-black/40 uppercase mb-1 block">
+                      <span className="font-mono text-[11px] sm:text-xs tracking-[0.2em] text-black/40 uppercase mb-1 block">
                         {selectedSkill.category}
                       </span>
-                      <h3 className="font-sans font-black text-2xl sm:text-3xl md:text-4xl tracking-tight text-[#0f0f0f] uppercase leading-tight">
+                      <h3 className="font-sans font-black text-xl sm:text-3xl md:text-4xl tracking-tight text-[#0f0f0f] uppercase leading-tight">
                         {selectedSkill.title}
                       </h3>
                     </div>
 
-                    <p className="font-sans font-normal text-sm sm:text-base text-black/80 leading-relaxed">
+                    <p className="font-sans font-normal text-xs sm:text-sm md:text-base text-black/80 leading-relaxed">
                       {selectedSkill.description}
                     </p>
 
                     <div>
-                      <h4 className="font-mono text-xs tracking-[0.2em] text-black/40 uppercase mb-2">
+                      <h4 className="font-mono text-[10px] sm:text-xs tracking-[0.2em] text-black/40 uppercase mb-1.5 sm:mb-2">
                         CORE DELIVERABLES & METHODS
                       </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2">
                         {selectedSkill.bullets.map((bullet, idx) => (
                           <div
                             key={idx}
-                            className="p-2.5 rounded-xl bg-black/[0.03] border border-black/5 hover:border-black/15 transition-all"
+                            className="p-2 sm:p-2.5 rounded-xl bg-black/[0.03] border border-black/5 hover:border-black/15 transition-all"
                           >
                             <span className="font-sans text-xs sm:text-sm font-medium text-black/85 leading-snug block">
                               {bullet}
@@ -512,103 +509,23 @@ function ExpertiseComponent() {
           </div>
 
           {/* ========================================================== */}
-          {/* SLIDE 2: KNOWN TOOLS (Tools & Technologies Grid) */}
+          {/* SLIDE 2: KNOWN TOOLS (Zero-Gravity Interactive Sandbox) */}
           {/* ========================================================== */}
-          <div className="w-[100vw] min-w-[100vw] shrink-0 flex flex-col justify-center">
-            <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 md:px-12 flex flex-col gap-4">
+          <div className="w-full md:w-[100vw] md:min-w-[100vw] shrink-0 flex flex-col justify-center pt-8 md:pt-0 border-t border-black/10 md:border-t-0">
+            <div className="max-w-7xl mx-auto w-full px-4 sm:px-8 md:px-12 flex flex-col gap-3">
               
-              {/* Filter Pills */}
-              <div className="flex items-center justify-start gap-2 flex-wrap font-mono text-xs">
-                <button
-                  onClick={() => {
-                    playClickPop(0.3, 1.1);
-                    setToolCategoryFilter("all");
-                  }}
-                  className={`px-3.5 py-1.5 rounded-xl border transition-all duration-300 cursor-pointer ${
-                    toolCategoryFilter === "all"
-                      ? "bg-[#0f0f0f] text-white border-black font-semibold shadow-sm"
-                      : "bg-white/60 text-black/70 border-black/10 hover:border-black/30 hover:bg-white"
-                  }`}
-                >
-                  ALL TOOLS ({KNOWN_TOOLS.length})
-                </button>
-                <button
-                  onClick={() => {
-                    playClickPop(0.3, 1.15);
-                    setToolCategoryFilter("design");
-                  }}
-                  className={`px-3.5 py-1.5 rounded-xl border transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
-                    toolCategoryFilter === "design"
-                      ? "bg-[#0f0f0f] text-white border-black font-semibold shadow-sm"
-                      : "bg-white/60 text-black/70 border-black/10 hover:border-black/30 hover:bg-white"
-                  }`}
-                >
-                  <Layers size={13} />
-                  <span>UI/UX & DESIGN</span>
-                </button>
-                <button
-                  onClick={() => {
-                    playClickPop(0.3, 1.2);
-                    setToolCategoryFilter("dev");
-                  }}
-                  className={`px-3.5 py-1.5 rounded-xl border transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
-                    toolCategoryFilter === "dev"
-                      ? "bg-[#0f0f0f] text-white border-black font-semibold shadow-sm"
-                      : "bg-white/60 text-black/70 border-black/10 hover:border-black/30 hover:bg-white"
-                  }`}
-                >
-                  <Code2 size={13} />
-                  <span>FRONTEND & CODE</span>
-                </button>
-                <button
-                  onClick={() => {
-                    playClickPop(0.3, 1.25);
-                    setToolCategoryFilter("motion");
-                  }}
-                  className={`px-3.5 py-1.5 rounded-xl border transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
-                    toolCategoryFilter === "motion"
-                      ? "bg-[#0f0f0f] text-white border-black font-semibold shadow-sm"
-                      : "bg-white/60 text-black/70 border-black/10 hover:border-black/30 hover:bg-white"
-                  }`}
-                >
-                  <Box size={13} />
-                  <span>MOTION & 3D</span>
-                </button>
-                <button
-                  onClick={() => {
-                    playClickPop(0.3, 1.3);
-                    setToolCategoryFilter("ai");
-                  }}
-                  className={`px-3.5 py-1.5 rounded-xl border transition-all duration-300 cursor-pointer flex items-center gap-1.5 ${
-                    toolCategoryFilter === "ai"
-                      ? "bg-[#0f0f0f] text-white border-black font-semibold shadow-sm"
-                      : "bg-white/60 text-black/70 border-black/10 hover:border-black/30 hover:bg-white"
-                  }`}
-                >
-                  <Sparkles size={13} />
-                  <span>AI & CREATIVE</span>
-                </button>
+              {/* Subheading */}
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs tracking-[0.2em] text-black/50 uppercase">
+                  02 • KNOWN TOOLS & ZERO-G ARSENAL
+                </span>
+                <span className="font-mono text-[11px] text-black/40 hidden sm:inline">
+                  TOUCH / DRAG / FLING TO SCATTER
+                </span>
               </div>
-
-              {/* Tools Cards Grid - Free flowing without internal scrollbar, hugging all content */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 w-full p-1">
-                {filteredTools.map((tool) => {
-                  const IconComponent = tool.icon;
-                  return (
-                    <div
-                      key={tool.name}
-                      className="group relative p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-white/70 hover:bg-white/95 border border-white/80 hover:border-white transition-all duration-300 flex items-center gap-2 sm:gap-3 shadow-xs hover:shadow-md hover:-translate-y-0.5 cursor-default"
-                    >
-                      <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-black/[0.04] group-hover:bg-black/[0.08] flex items-center justify-center shrink-0 transition-colors p-1 sm:p-1.5">
-                        <IconComponent size={18} />
-                      </div>
-                      <span className="font-sans font-bold text-[11px] sm:text-xs md:text-sm text-[#0f0f0f] leading-tight truncate">
-                        {tool.name}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              
+              {/* Zero Gravity Physics Sandbox */}
+              <ZeroGravityTools />
             </div>
           </div>
         </div>
