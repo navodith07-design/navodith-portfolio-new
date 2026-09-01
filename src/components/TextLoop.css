@@ -7,7 +7,19 @@
 .text-loop-svg {
   display: block;
   width: 100%;
-  height: auto;
+  height: 160px;
+}
+
+@media (min-width: 640px) {
+  .text-loop-svg {
+    height: 220px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .text-loop-svg {
+    height: 260px;
+  }
 }
 
 .text-loop-text {

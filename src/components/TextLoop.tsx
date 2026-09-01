@@ -1,5 +1,4 @@
 import React, { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { gsap } from 'gsap';
 
 import './TextLoop.css';
 
@@ -90,12 +89,16 @@ const TextLoop: React.FC<TextLoopProps> = ({
   style = {}
 }) => {
   const rootRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const pathRef = useRef<SVGPathElement>(null);
   const measureRef = useRef<SVGTextElement>(null);
-  const headRef = useRef<SVGTextPathElement>(null);
-  const tailRef = useRef<SVGTextPathElement>(null);
+  const textPathRef = useRef<SVGTextPathElement>(null);
 
-  const [metrics, setMetrics] = useState<{ length: number; reps: number }>({ length: 0, reps: 1 });
+  const [metrics, setMetrics] = useState<{ length: number; unitWidth: number; reps: number }>({
+    length: 3000,
+    unitWidth: 550,
+    reps: 12
+  });
 
   const rawId = useId();
   const pathId = `text-loop-${rawId.replace(/:/g, '')}`;
@@ -109,7 +112,12 @@ const TextLoop: React.FC<TextLoopProps> = ({
   }, [text, separator, uppercase]);
 
   const textStyle = useMemo(
-    () => ({ fontSize: `${fontSize}px`, fontWeight, letterSpacing: `${letterSpacing}px` }),
+    () => ({
+      fontSize: `${fontSize}px`,
+      fontWeight,
+      letterSpacing: `${letterSpacing}px`,
+      fontFamily: "'Space Grotesk', system-ui, -apple-system, sans-serif"
+    }),
     [fontSize, fontWeight, letterSpacing]
   );
 
@@ -122,60 +130,111 @@ const TextLoop: React.FC<TextLoopProps> = ({
 
     const measure = () => {
       if (cancelled) return;
-      let length = 0;
-      let unitWidth = 0;
+      let pathLen = 0;
+      let textUnitWidth = 0;
       try {
-        length = pathEl.getTotalLength();
-        unitWidth = measureEl.getComputedTextLength();
+        pathLen = pathEl.getTotalLength();
+        textUnitWidth = measureEl.getComputedTextLength();
       } catch {
-        return;
+        pathLen = 3000;
+        textUnitWidth = fontSize * (unit.length || 20) * 0.6;
       }
-      if (!length) return;
+      if (!pathLen || pathLen <= 0) {
+        pathLen = 3000;
+      }
+      if (!textUnitWidth || textUnitWidth <= 0) {
+        textUnitWidth = Math.max(120, fontSize * (unit.length || 20) * 0.6);
+      }
 
-      const reps = unitWidth > 0 ? Math.max(1, Math.round(length / unitWidth)) : 1;
-      setMetrics(prev => (prev.length === length && prev.reps === reps ? prev : { length, reps }));
+      // We need enough copies so that repeating unit fits at least twice the entire curve length + buffer
+      const reps = Math.max(12, Math.ceil((pathLen * 3) / textUnitWidth));
+      setMetrics(prev =>
+        prev.length === pathLen && Math.abs(prev.unitWidth - textUnitWidth) < 2 && prev.reps === reps
+          ? prev
+          : { length: pathLen, unitWidth: textUnitWidth, reps }
+      );
     };
 
     measure();
+
+    const t1 = setTimeout(measure, 50);
+    const t2 = setTimeout(measure, 200);
+
     if (typeof document !== 'undefined' && document.fonts?.ready) {
       document.fonts.ready.then(measure).catch(() => {});
     }
 
     return () => {
       cancelled = true;
+      clearTimeout(t1);
+      clearTimeout(t2);
     };
   }, [d, unit, fontSize, fontWeight, letterSpacing]);
 
+  // Infinite Animation Loop: Calculate SMIL & dynamic offsets
+  const unitWidth = metrics.unitWidth || 550;
+  const baseOffset = -unitWidth * 3;
+  const targetOffset = direction === 'reverse' ? baseOffset + unitWidth : baseOffset - unitWidth;
+  const duration = Math.max(1, unitWidth / Math.max(10, speed));
+
+  // JS Ticker fallback for instant frame-by-frame rendering
   useEffect(() => {
-    const { length } = metrics;
-    const head = headRef.current;
-    const tail = tailRef.current;
-    if (!head || !tail || !length) return undefined;
-
-    const apply = (offset: number) => {
-      const partner = offset >= 0 ? offset - length : offset + length;
-      head.setAttribute('startOffset', String(offset));
-      tail.setAttribute('startOffset', String(partner));
-    };
-
-    apply(0);
+    const textPath = textPathRef.current;
+    if (!textPath || unitWidth <= 0) return undefined;
 
     const prefersReduced =
       typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (prefersReduced || speed <= 0) return undefined;
 
-    const state = { offset: 0 };
-    const tween = gsap.to(state, {
-      offset: direction === 'reverse' ? -length : length,
-      duration: length / speed,
-      ease: 'none',
-      repeat: -1,
-      onUpdate: () => apply(state.offset)
-    });
+    let isPaused = false;
+    let animFrameId: number;
+    let lastTime = performance.now();
+    let currentOffset = baseOffset;
+
+    // Movement direction: forward moves text forward along the path
+    const dirMultiplier = direction === 'reverse' ? 1 : -1;
+
+    const tick = (now: number) => {
+      const delta = (now - lastTime) / 1000;
+      lastTime = now;
+
+      if (!isPaused && delta > 0 && delta < 0.2) {
+        currentOffset += speed * dirMultiplier * delta;
+
+        // Seamless modulus wrapping around unitWidth
+        if (dirMultiplier < 0 && currentOffset <= baseOffset - unitWidth) {
+          currentOffset += unitWidth;
+        } else if (dirMultiplier > 0 && currentOffset >= baseOffset + unitWidth) {
+          currentOffset -= unitWidth;
+        }
+
+        // Set startOffset value across all SVG attribute & property APIs
+        const offsetVal = currentOffset.toFixed(1);
+        textPath.setAttribute('startOffset', offsetVal);
+        if (textPath.startOffset && textPath.startOffset.baseVal) {
+          textPath.startOffset.baseVal.value = currentOffset;
+        }
+      }
+
+      animFrameId = requestAnimationFrame(tick);
+    };
+
+    animFrameId = requestAnimationFrame(tick);
 
     const root = rootRef.current;
-    const pause = () => tween.pause();
-    const resume = () => tween.resume();
+    const pause = () => {
+      if (pauseOnHover) {
+        isPaused = true;
+        svgRef.current?.pauseAnimations?.();
+      }
+    };
+    const resume = () => {
+      if (pauseOnHover) {
+        lastTime = performance.now();
+        isPaused = false;
+        svgRef.current?.unpauseAnimations?.();
+      }
+    };
 
     if (pauseOnHover && root) {
       root.addEventListener('pointerenter', pause);
@@ -183,20 +242,20 @@ const TextLoop: React.FC<TextLoopProps> = ({
     }
 
     return () => {
-      tween.kill();
+      cancelAnimationFrame(animFrameId);
       if (pauseOnHover && root) {
         root.removeEventListener('pointerenter', pause);
         root.removeEventListener('pointerleave', resume);
       }
     };
-  }, [metrics, speed, direction, pauseOnHover]);
+  }, [metrics, speed, direction, pauseOnHover, baseOffset, unitWidth]);
 
-  const loopText = unit.repeat(metrics.reps);
-  const fitLength = metrics.length || undefined;
+  const loopText = useMemo(() => unit.repeat(metrics.reps), [unit, metrics.reps]);
 
   return (
     <div ref={rootRef} className={`text-loop ${className}`.trim()} style={style}>
       <svg
+        ref={svgRef}
         className="text-loop-svg"
         viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
         preserveAspectRatio={preserveAspectRatio}
@@ -218,15 +277,28 @@ const TextLoop: React.FC<TextLoopProps> = ({
           {unit}
         </text>
 
-        <text className="text-loop-text" style={textStyle} fill={color} dominantBaseline="central" aria-hidden="true">
-          <textPath ref={headRef} href={`#${pathId}`} startOffset={0} textLength={fitLength} lengthAdjust="spacing">
+        <text
+          className="text-loop-text"
+          style={textStyle}
+          fill={color}
+          dominantBaseline="central"
+          alignmentBaseline="central"
+          aria-hidden="true"
+        >
+          <textPath
+            ref={textPathRef}
+            href={`#${pathId}`}
+            xlinkHref={`#${pathId}`}
+            startOffset={baseOffset}
+          >
             {loopText}
-          </textPath>
-        </text>
-
-        <text className="text-loop-text" style={textStyle} fill={color} dominantBaseline="central" aria-hidden="true">
-          <textPath ref={tailRef} href={`#${pathId}`} startOffset={0} textLength={fitLength} lengthAdjust="spacing">
-            {loopText}
+            <animate
+              attributeName="startOffset"
+              from={baseOffset}
+              to={targetOffset}
+              dur={`${duration}s`}
+              repeatCount="indefinite"
+            />
           </textPath>
         </text>
       </svg>

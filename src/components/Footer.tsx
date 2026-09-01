@@ -119,14 +119,14 @@ function FooterComponent() {
             direction="forward"
             separator="✦"
             curviness={65}
-            fontSize={44}
+            fontSize={52}
             fontWeight={800}
-            letterSpacing={2.5}
+            letterSpacing={3}
             uppercase={true}
             color="#ffffff"
             ribbon={true}
             ribbonColor="#18181b"
-            ribbonWidth={84}
+            ribbonWidth={100}
             pauseOnHover={true}
             preserveAspectRatio="none"
             className="w-full"
