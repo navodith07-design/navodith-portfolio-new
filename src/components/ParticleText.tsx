@@ -84,6 +84,8 @@ export interface ParticleTextProps {
 interface Particle {
   x: number;
   y: number;
+  vx: number;
+  vy: number;
   startX: number;
   startY: number;
   targetX: number;
@@ -154,6 +156,34 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       smoothY: 0
     };
 
+    let lastScatterTime = 0;
+    const triggerScatterBurst = (originX?: number, originY?: number, intensity = 8.5) => {
+      if (reducedMotion || !particles.length) return;
+      const now = performance.now();
+      if (now - lastScatterTime < 300) return;
+      lastScatterTime = now;
+
+      const cx = typeof originX === 'number' ? originX : width / 2;
+      const cy = typeof originY === 'number' ? originY : height / 2;
+
+      // If still in gather phase, immediately switch to free physics
+      gathering = false;
+      hasGathered = true;
+
+      particles.forEach(p => {
+        const dx = p.x - cx;
+        const dy = p.y - cy;
+        const dist = Math.hypot(dx, dy) || 1;
+
+        // Radial outward blast angle with chaotic cosmic swirl
+        const angle = Math.atan2(dy, dx) + (p.seed - 0.5) * 1.4;
+        const speed = intensity * (0.65 + p.depth * 0.85) * Math.max(0.4, 1 - Math.min(dist / Math.max(width, height), 0.75));
+
+        p.vx += Math.cos(angle) * speed + (p.seed - 0.5) * 7;
+        p.vy += Math.sin(angle) * speed + (p.depth - 0.5) * 7;
+      });
+    };
+
     const startGather = (fromScatter = true) => {
       if (!particles.length) return;
 
@@ -163,13 +193,15 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       particles.forEach(particle => {
         if (fromScatter) {
           const angle = particle.seed * Math.PI * 2;
-          const distance = spread * (0.35 + particle.depth * 0.75);
-          particle.x = particle.targetX + Math.cos(angle) * distance + (particle.depth - 0.5) * spread * 0.55;
-          particle.y = particle.targetY + Math.sin(angle) * distance + (particle.seed - 0.5) * spread * 0.55;
+          const distance = spread * (0.5 + particle.depth * 0.9);
+          particle.x = particle.targetX + Math.cos(angle) * distance + (particle.depth - 0.5) * spread * 0.8;
+          particle.y = particle.targetY + Math.sin(angle) * distance + (particle.seed - 0.5) * spread * 0.8;
         }
 
         particle.startX = particle.x;
         particle.startY = particle.y;
+        particle.vx = 0;
+        particle.vy = 0;
         particle.delay = reducedMotion ? 0 : particle.seed * stagger;
       });
 
@@ -207,8 +239,6 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       let complete = true;
 
       particles.forEach(particle => {
-        let baseX = particle.targetX;
-        let baseY = particle.targetY;
         let progress = 1;
         let particleCurrentSize = particle.size;
 
@@ -216,41 +246,66 @@ const ParticleText: React.FC<ParticleTextProps> = ({
           const local = (now - gatherStart - particle.delay) / Math.max(1, reducedMotion ? 1 : gatherDuration);
           progress = clamp(local, 0, 1);
           const eased = easeOutCubic(progress);
-          baseX = particle.startX + (particle.targetX - particle.startX) * eased;
-          baseY = particle.startY + (particle.targetY - particle.startY) * eased;
+          const baseX = particle.startX + (particle.targetX - particle.startX) * eased;
+          const baseY = particle.startY + (particle.targetY - particle.startY) * eased;
+          
+          particle.x = baseX + particle.vx;
+          particle.y = baseY + particle.vy;
+          particle.vx *= 0.9;
+          particle.vy *= 0.9;
+
           if (progress < 1) complete = false;
         } else if (!hasGathered && trigger === 'view') {
-          // Keep in scattered initial position until viewport entry
-          baseX = particle.startX;
-          baseY = particle.startY;
-          progress = 0.4;
-        } else if (!reducedMotion && idleDrift > 0) {
+          // Floating scattered initial position before entering viewport
           const driftTime = now * 0.001;
-          baseX += Math.sin(driftTime * 0.9 + particle.seed * 10) * idleDrift * particle.depth;
-          baseY += Math.cos(driftTime * 0.75 + particle.depth * 10) * idleDrift * particle.depth;
-        }
+          particle.x = particle.startX + Math.sin(driftTime * 0.8 + particle.seed * 10) * 12 * particle.depth;
+          particle.y = particle.startY + Math.cos(driftTime * 0.65 + particle.depth * 10) * 12 * particle.depth;
+          progress = 0.45;
+        } else {
+          // Assembled text state with smooth spring-physics return for scatter bursts
+          if (!reducedMotion) {
+            const dx = particle.targetX - particle.x;
+            const dy = particle.targetY - particle.y;
 
-        // Magnifying glass lens zoom & gentle deflection on hover
-        if (pointer.active && !reducedMotion && repelRadius > 0) {
-          const dx = baseX - pointer.smoothX;
-          const dy = baseY - pointer.smoothY;
-          const distance = Math.hypot(dx, dy);
-          if (distance > 0 && distance < repelRadius) {
-            const mag = Math.pow(1 - distance / repelRadius, 2);
-            // Magnifying lens effect: enlarge particles under the cursor
-            particleCurrentSize = particle.size * (1 + mag * 1.7);
+            // Spring force + velocity damping for smooth settling within ~1.2 - 1.5s
+            const springK = 0.045;
+            const damping = 0.87;
 
-            if (pointerRepel > 0) {
-              const force = mag * pointerRepel;
-              baseX += (dx / distance) * force;
-              baseY += (dy / distance) * force;
+            particle.vx += dx * springK;
+            particle.vy += dy * springK;
+            particle.vx *= damping;
+            particle.vy *= damping;
+
+            if (idleDrift > 0 && Math.hypot(particle.vx, particle.vy) < 0.15) {
+              const driftTime = now * 0.001;
+              particle.vx += Math.sin(driftTime * 0.9 + particle.seed * 10) * idleDrift * 0.04 * particle.depth;
+              particle.vy += Math.cos(driftTime * 0.75 + particle.depth * 10) * idleDrift * 0.04 * particle.depth;
             }
+
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+          } else {
+            particle.x = particle.targetX;
+            particle.y = particle.targetY;
           }
         }
 
-        const follow = reducedMotion ? 1 : 0.22;
-        particle.x += (baseX - particle.x) * follow;
-        particle.y += (baseY - particle.y) * follow;
+        // Pointer repel & magnification when near cursor
+        if (pointer.active && !reducedMotion && repelRadius > 0) {
+          const dx = particle.x - pointer.smoothX;
+          const dy = particle.y - pointer.smoothY;
+          const distance = Math.hypot(dx, dy);
+          if (distance > 0 && distance < repelRadius) {
+            const mag = Math.pow(1 - distance / repelRadius, 2);
+            particleCurrentSize = particle.size * (1 + mag * 1.6);
+
+            if (pointerRepel > 0) {
+              const force = mag * pointerRepel * 0.1;
+              particle.vx += (dx / distance) * force;
+              particle.vy += (dy / distance) * force;
+            }
+          }
+        }
 
         ctx.globalAlpha = clamp(0.35 + progress * 0.65, 0, 1);
         drawParticle(particle, particleCurrentSize);
@@ -359,13 +414,15 @@ const ParticleText: React.FC<ParticleTextProps> = ({
         const blend = baseRgb && highlightRgb ? clamp(target.x / Math.max(1, width) + (seed - 0.5) * 0.35, 0, 1) : 0;
         const particleColor = baseRgb && highlightRgb ? rgbToCss(mixRgb(baseRgb, highlightRgb, blend)) : color;
         const angle = seed * Math.PI * 2;
-        const distance = (reducedMotion ? 0 : scatter) * (0.35 + depth * 0.75);
-        const startX = target.x + Math.cos(angle) * distance + (seed - 0.5) * scatter * 0.45;
-        const startY = target.y + Math.sin(angle) * distance + (depth - 0.9) * scatter * 0.45;
+        const distance = (reducedMotion ? 0 : scatter) * (0.6 + depth * 0.9);
+        const startX = target.x + Math.cos(angle) * distance + (seed - 0.5) * scatter * 0.8;
+        const startY = target.y + Math.sin(angle) * distance + (depth - 0.5) * scatter * 0.8;
 
         return {
           x: reducedMotion ? target.x : startX,
           y: reducedMotion ? target.y : startY,
+          vx: 0,
+          vy: 0,
           startX,
           startY,
           targetX: target.x,
@@ -389,6 +446,8 @@ const ParticleText: React.FC<ParticleTextProps> = ({
           particle.y = particle.targetY;
           particle.startX = particle.targetX;
           particle.startY = particle.targetY;
+          particle.vx = 0;
+          particle.vy = 0;
           particle.delay = 0;
         });
         gathering = false;
@@ -418,11 +477,26 @@ const ParticleText: React.FC<ParticleTextProps> = ({
 
     const handlePointerEnter = (event: PointerEvent | MouseEvent) => {
       handlePointerMove(event);
-      if (trigger === 'hover') startGather(true);
+      // On desktop hover or entry: trigger scatter burst that smoothly rejoins
+      triggerScatterBurst(pointer.x, pointer.y, 7.5);
     };
 
-    const handleClick = () => {
-      if (trigger === 'click') startGather(true);
+    const handlePointerDown = (event: PointerEvent | MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const clickY = event.clientY - rect.top;
+      pointer.x = clickX;
+      pointer.y = clickY;
+      pointer.active = true;
+      // On mobile tap or desktop click: trigger energetic scatter burst that smoothly rejoins
+      triggerScatterBurst(clickX, clickY, 10.0);
+    };
+
+    const handleClick = (event: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const clickY = event.clientY - rect.top;
+      triggerScatterBurst(clickX, clickY, 10.0);
     };
 
     // IntersectionObserver to trigger gathering on scroll into viewport
@@ -431,8 +505,13 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       intersectionObserver = new IntersectionObserver(
         entries => {
           entries.forEach(entry => {
-            if (entry.isIntersecting && !hasGathered) {
-              startGather(false);
+            if (entry.isIntersecting) {
+              if (!hasGathered) {
+                startGather(false);
+              }
+            } else {
+              // When completely out of view, reset state so re-entry starts scattered and gathers
+              hasGathered = false;
             }
           });
         },
@@ -450,6 +529,7 @@ const ParticleText: React.FC<ParticleTextProps> = ({
     reduceMotionQuery?.addEventListener('change', handleReduceMotionChange);
     canvas.addEventListener('pointerenter', handlePointerEnter as any);
     canvas.addEventListener('pointermove', handlePointerMove as any);
+    canvas.addEventListener('pointerdown', handlePointerDown as any);
     canvas.addEventListener('pointerleave', handlePointerLeave);
     canvas.addEventListener('click', handleClick);
 
@@ -464,6 +544,7 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       reduceMotionQuery?.removeEventListener('change', handleReduceMotionChange);
       canvas.removeEventListener('pointerenter', handlePointerEnter as any);
       canvas.removeEventListener('pointermove', handlePointerMove as any);
+      canvas.removeEventListener('pointerdown', handlePointerDown as any);
       canvas.removeEventListener('pointerleave', handlePointerLeave);
       canvas.removeEventListener('click', handleClick);
 

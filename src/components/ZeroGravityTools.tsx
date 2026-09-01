@@ -70,11 +70,11 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
 
     // Approximate pill dimensions before DOM measurement
     const isMobile = width < 640;
-    const pillW = isMobile ? 120 : 145;
-    const pillH = isMobile ? 42 : 48;
-    const radius = Math.max(pillW, pillH) * 0.52;
+    const pillW = isMobile ? 80 : 145;
+    const pillH = isMobile ? 28 : 48;
+    const radius = Math.max(pillW, pillH) * (isMobile ? 0.44 : 0.52);
 
-    const cols = Math.max(3, Math.floor(width / (pillW + 20)));
+    const cols = isMobile ? Math.max(3, Math.floor(width / (pillW + 12))) : Math.max(3, Math.floor(width / (pillW + 20)));
     const rows = Math.ceil(KNOWN_TOOLS.length / cols);
     const cellW = width / cols;
     const cellH = height / Math.max(1, rows);
@@ -84,12 +84,12 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
       const row = Math.floor(idx / cols);
 
       // Distribute nicely with random jitter across the container
-      const startX = cellW * (col + 0.5) + (Math.random() - 0.5) * (cellW * 0.4);
-      const startY = cellH * (row + 0.5) + (Math.random() - 0.5) * (cellH * 0.4);
+      const startX = cellW * (col + 0.5) + (Math.random() - 0.5) * (cellW * (isMobile ? 0.5 : 0.4));
+      const startY = cellH * (row + 0.5) + (Math.random() - 0.5) * (cellH * (isMobile ? 0.5 : 0.4));
 
       // Random gentle initial zero-g float velocity
       const angle = Math.random() * Math.PI * 2;
-      const speed = 0.4 + Math.random() * 0.8;
+      const speed = isMobile ? (0.6 + Math.random() * 0.9) : (0.4 + Math.random() * 0.8);
 
       return {
         id: `tool-${tool.name}`,
@@ -101,8 +101,8 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
         width: pillW,
         height: pillH,
         radius,
-        rot: (Math.random() - 0.5) * 12,
-        vRot: (Math.random() - 0.5) * 0.15,
+        rot: (Math.random() - 0.5) * (isMobile ? 8 : 12),
+        vRot: (Math.random() - 0.5) * (isMobile ? 0.2 : 0.15),
         seed: Math.random() * 100,
         isDragging: false,
         el: null,
@@ -116,6 +116,7 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
   const handleScatter = useCallback(() => {
     playAirDisplacement(0.3);
     const { width, height } = sizeRef.current;
+    const isMobile = width < 640;
     const cx = width / 2;
     const cy = height / 2;
 
@@ -123,11 +124,11 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
       const dx = body.x - cx;
       const dy = body.y - cy;
       const dist = Math.hypot(dx, dy) || 1;
-      const pulseSpeed = 4.5 + Math.random() * 3.5;
+      const pulseSpeed = isMobile ? (5.5 + Math.random() * 4.5) : (4.5 + Math.random() * 3.5);
 
       body.vx += (dx / dist) * pulseSpeed;
       body.vy += (dy / dist) * pulseSpeed;
-      body.vRot += (Math.random() - 0.5) * 1.8;
+      body.vRot += (Math.random() - 0.5) * (isMobile ? 2.4 : 1.8);
     });
   }, []);
 
@@ -192,6 +193,11 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
       const timeSec = now * 0.001;
 
       // 1. Move bodies with zero-g drift and air resistance
+      const isMobile = width < 640;
+      const friction = isMobile ? 0.9975 : 0.993;
+      const rotFriction = isMobile ? 0.992 : 0.985;
+      const driftMagnitude = isMobile ? 0.06 : 0.04;
+
       for (let i = 0; i < bodies.length; i++) {
         const b = bodies[i];
 
@@ -204,22 +210,23 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
           b.x = targetX;
           b.y = targetY;
         } else {
-          // Continuous micro cosmic drift so zero-g feels active
-          const driftX = Math.cos(timeSec * 0.8 + b.seed) * 0.04;
-          const driftY = Math.sin(timeSec * 0.7 + b.seed * 1.5) * 0.04;
+          // Continuous micro cosmic drift so zero-g feels active and weightless
+          const driftX = Math.cos(timeSec * 0.8 + b.seed) * driftMagnitude;
+          const driftY = Math.sin(timeSec * 0.7 + b.seed * 1.5) * driftMagnitude;
           b.vx += driftX;
           b.vy += driftY;
 
-          // Zero-g low drag
-          b.vx *= 0.993;
-          b.vy *= 0.993;
-          b.vRot *= 0.985;
+          // Zero-g low drag / friction
+          b.vx *= friction;
+          b.vy *= friction;
+          b.vRot *= rotFriction;
 
           // Speed limit
           const speed = Math.hypot(b.vx, b.vy);
-          if (speed > 12) {
-            b.vx = (b.vx / speed) * 12;
-            b.vy = (b.vy / speed) * 12;
+          const maxSpeed = isMobile ? 14 : 12;
+          if (speed > maxSpeed) {
+            b.vx = (b.vx / speed) * maxSpeed;
+            b.vy = (b.vy / speed) * maxSpeed;
           }
 
           b.x += b.vx;
@@ -234,10 +241,10 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
             const dx = b.x - pointer.x;
             const dy = b.y - pointer.y;
             const dist = Math.hypot(dx, dy);
-            const repelRadius = 140;
+            const repelRadius = isMobile ? 100 : 140;
 
             if (dist < repelRadius && dist > 0) {
-              const force = Math.pow(1 - dist / repelRadius, 2) * 1.8;
+              const force = Math.pow(1 - dist / repelRadius, 2) * (isMobile ? 1.4 : 1.8);
               b.vx += (dx / dist) * force;
               b.vy += (dy / dist) * force;
               b.vRot += (dx > 0 ? 0.05 : -0.05) * force;
@@ -249,6 +256,12 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
       // 2. Strict Multi-Pass Non-Overlapping Collision Resolution
       // Running 6 solver iterations guarantees elements never overlap or penetrate
       const solverIterations = 6;
+      const wallPadding = isMobile ? 8 : 12;
+      const wallRestitution = isMobile ? 0.86 : 0.78;
+      const bodyRestitution = isMobile ? 0.85 : 0.75;
+      const collisionDistMultiplier = isMobile ? 0.76 : 0.88;
+      const collisionMargin = isMobile ? 3 : 8;
+
       for (let iter = 0; iter < solverIterations; iter++) {
         for (let i = 0; i < bodies.length; i++) {
           const a = bodies[i];
@@ -256,25 +269,24 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
           // Collision against walls
           const halfW = a.width / 2;
           const halfH = a.height / 2;
-          const padding = 12;
 
-          if (a.x - halfW < padding) {
-            a.x = padding + halfW;
-            if (a.vx < 0) a.vx = -a.vx * 0.78;
+          if (a.x - halfW < wallPadding) {
+            a.x = wallPadding + halfW;
+            if (a.vx < 0) a.vx = -a.vx * wallRestitution;
             a.vRot *= -0.8;
-          } else if (a.x + halfW > width - padding) {
-            a.x = width - padding - halfW;
-            if (a.vx > 0) a.vx = -a.vx * 0.78;
+          } else if (a.x + halfW > width - wallPadding) {
+            a.x = width - wallPadding - halfW;
+            if (a.vx > 0) a.vx = -a.vx * wallRestitution;
             a.vRot *= -0.8;
           }
 
-          if (a.y - halfH < padding) {
-            a.y = padding + halfH;
-            if (a.vy < 0) a.vy = -a.vy * 0.78;
+          if (a.y - halfH < wallPadding) {
+            a.y = wallPadding + halfH;
+            if (a.vy < 0) a.vy = -a.vy * wallRestitution;
             a.vRot *= -0.8;
-          } else if (a.y + halfH > height - padding) {
-            a.y = height - padding - halfH;
-            if (a.vy > 0) a.vy = -a.vy * 0.78;
+          } else if (a.y + halfH > height - wallPadding) {
+            a.y = height - wallPadding - halfH;
+            if (a.vy > 0) a.vy = -a.vy * wallRestitution;
             a.vRot *= -0.8;
           }
 
@@ -287,7 +299,7 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
             const dist = Math.hypot(dx, dy);
 
             // Calculate minimum non-overlapping distance between rounded pill boundaries
-            const minAllowedDist = (a.radius + b.radius) * 0.88 + 8;
+            const minAllowedDist = (a.radius + b.radius) * collisionDistMultiplier + collisionMargin;
 
             if (dist < minAllowedDist && dist > 0.001) {
               const overlap = minAllowedDist - dist;
@@ -314,8 +326,7 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
               const normalVel = relVx * nx + relVy * ny;
 
               if (normalVel < 0) {
-                const restitution = 0.75;
-                const impulse = -(1 + restitution) * normalVel * 0.5;
+                const impulse = -(1 + bodyRestitution) * normalVel * 0.5;
 
                 if (!a.isDragging) {
                   a.vx -= impulse * nx;
@@ -543,7 +554,7 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
-        className="relative w-full h-[380px] sm:h-[420px] md:h-[450px] rounded-2xl bg-white/40 backdrop-blur-xl border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)] overflow-hidden touch-none select-none"
+        className="relative w-full h-[390px] xs:h-[410px] sm:h-[420px] md:h-[450px] rounded-2xl bg-white/40 backdrop-blur-xl border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)] overflow-hidden touch-none select-none"
       >
         {/* Subtle Ambient Cosmic Grid & Zero-G Field Watermark */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.03)_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none" />
@@ -579,15 +590,15 @@ export default function ZeroGravityTools({ className = "" }: ZeroGravityToolsPro
                 transformOrigin: "center center",
                 zIndex: isCategoryMatch ? 10 : 5,
               }}
-              className={`group flex items-center gap-2 sm:gap-2.5 px-3 py-2 sm:px-3.5 sm:py-2.5 rounded-full bg-white/85 hover:bg-white backdrop-blur-md border border-white/95 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,1)] hover:shadow-[0_12px_28px_-4px_rgba(0,0,0,0.2),inset_0_1.5px_2px_rgba(255,255,255,1)] transition-colors duration-150 cursor-grab active:cursor-grabbing hover:scale-105 select-none`}
+              className={`group flex items-center gap-1.5 xs:gap-2 sm:gap-2.5 px-2.5 py-1.5 xs:px-3 xs:py-2 sm:px-3.5 sm:py-2.5 rounded-full bg-white/85 hover:bg-white backdrop-blur-md border border-white/95 shadow-[0_4px_14px_-3px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,1)] sm:shadow-[0_8px_20px_-4px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,1)] hover:shadow-[0_12px_28px_-4px_rgba(0,0,0,0.2),inset_0_1.5px_2px_rgba(255,255,255,1)] transition-colors duration-150 cursor-grab active:cursor-grabbing hover:scale-105 select-none`}
             >
               {/* Tool Icon Circle */}
-              <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-black/[0.05] group-hover:bg-black/[0.09] flex items-center justify-center shrink-0 transition-colors p-1">
-                <IconComponent size={15} />
+              <div className="w-5 h-5 xs:w-6 xs:h-6 sm:w-7 sm:h-7 rounded-full bg-black/[0.05] group-hover:bg-black/[0.09] flex items-center justify-center shrink-0 transition-colors p-0.5 sm:p-1">
+                <IconComponent size={13} />
               </div>
 
               {/* Tool Name */}
-              <span className="font-sans font-bold text-xs sm:text-[13px] text-[#0f0f0f] tracking-tight whitespace-nowrap">
+              <span className="font-sans font-bold text-[11px] xs:text-xs sm:text-[13px] text-[#0f0f0f] tracking-tight whitespace-nowrap">
                 {tool.name}
               </span>
             </div>

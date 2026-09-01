@@ -248,6 +248,17 @@ export const KNOWN_TOOLS: ToolItem[] = [
 function ExpertiseComponent() {
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState<number>(0);
+  const [isMobile, setIsMobile] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.innerWidth < 768 : false
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const selectedSkill = SKILLS[selectedIndex];
   const itemLabels = SKILLS.map((skill) => skill.title);
@@ -255,7 +266,7 @@ function ExpertiseComponent() {
   const sectionRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // GSAP ScrollTrigger for Ultra-Smooth Horizontal Pinning
+  // GSAP ScrollTrigger for Ultra-Smooth Horizontal Pinning (Desktop) & Scroll-to-Spin (Mobile)
   useEffect(() => {
     if (!sectionRef.current || !trackRef.current) return;
 
@@ -267,9 +278,20 @@ function ExpertiseComponent() {
         return track.scrollWidth - window.innerWidth;
       };
 
-      const isMobile = window.innerWidth < 768;
-      if (isMobile) {
-        // On mobile: no pinning or horizontal scroll translation; natural vertical flow
+      const mobile = window.innerWidth < 768;
+      if (mobile) {
+        // Mobile view alone: keep scroll to spin the wheel as the user scrolls through the section
+        ScrollTrigger.create({
+          trigger: sectionRef.current,
+          start: "top 65%",
+          end: "bottom 30%",
+          scrub: 0.3,
+          onUpdate: (self) => {
+            const rawIdx = Math.floor(self.progress * SKILLS.length);
+            const clampedIdx = Math.min(Math.max(0, rawIdx), SKILLS.length - 1);
+            setSelectedIndex((prev) => (prev !== clampedIdx ? clampedIdx : prev));
+          },
+        });
         return;
       }
 
@@ -430,7 +452,7 @@ function ExpertiseComponent() {
                     inset={16}
                     loop={false}
                     draggable={true}
-                    enableWheel={false}
+                    enableWheel={isMobile}
                     enableSound={true}
                     soundVolume={0.5}
                     className="z-10"
