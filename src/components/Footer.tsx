@@ -3,7 +3,7 @@ import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { ArrowUp, Mail, Check, Copy } from "lucide-react";
 import { playHarmonicChime, playHoverTick, playWhoosh, playClickPop } from "../utils/sound";
-import ParticleText from "./ParticleText";
+import TextLoop from "./TextLoop";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -97,49 +97,49 @@ function FooterComponent() {
     <footer
       ref={footerRef}
       id="contact"
-      className="relative z-40 w-full min-h-screen bg-[#0a0a0a] text-[#f5f5f7] pt-24 pb-16 px-6 sm:px-8 md:px-12 rounded-t-[36px] sm:rounded-t-[54px] -mt-12 sm:-mt-20 border-t border-white/15 shadow-[0_-40px_120px_rgba(0,0,0,0.98)] flex flex-col justify-between overflow-hidden"
+      className="relative z-40 w-full min-h-screen bg-[#0a0a0a] text-[#f5f5f7] pt-24 pb-16 rounded-t-[36px] sm:rounded-t-[54px] -mt-12 sm:-mt-20 border-t border-white/15 shadow-[0_-40px_120px_rgba(0,0,0,0.98)] flex flex-col justify-between overflow-hidden"
     >
       {/* Specular Ambient Edge Light */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 max-w-4xl h-[1px] bg-gradient-to-r from-transparent via-white/30 to-transparent pointer-events-none" />
 
-      <div className="max-w-7xl mx-auto w-full flex-1 flex flex-col justify-center items-center gap-10 sm:gap-14">
-        
-        {/* Section Metadata Title */}
-        <span className="font-mono text-xs tracking-[0.25em] text-white/40 uppercase self-start">
+      {/* Top Header Section with container padding */}
+      <div className="max-w-7xl mx-auto w-full px-6 sm:px-8 md:px-12 flex flex-col items-start">
+        <span className="font-mono text-xs tracking-[0.25em] text-white/40 uppercase">
           CONNECT
         </span>
+      </div>
 
-        {/* Massive Dynamic Contact Callout with ParticleText */}
-        <div className="w-full text-center flex flex-col items-center max-w-5xl gap-6 my-auto select-none">
-          <h2
-            className="w-full flex items-center justify-center cursor-pointer min-h-[180px] sm:min-h-[220px] md:min-h-[260px]"
-          >
-            <ParticleText
-              text={text}
-              particleSize={2.2}
-              density={4}
-              color="#f8fafc"
-              highlightColor="#646365"
-              scatter={190}
-              gatherDuration={1600}
-              stagger={420}
-              pointerRepel={42}
-              repelRadius={120}
-              idleDrift={0.8}
-              trigger="view"
-              fontSize="clamp(2.4rem, 6.2vw, 5.2rem)"
-              fontWeight={800}
-              fontFamily="inherit"
-              glow={true}
-              className="w-full h-full min-h-[180px] sm:min-h-[220px] md:min-h-[260px]"
-            />
-          </h2>
-          <p className="font-sans text-sm md:text-base text-white/50 max-w-lg mx-auto -mt-2">
+      {/* End-to-End Edge-to-Edge Dynamic Contact Callout with TextLoop */}
+      <div className="w-full my-auto flex flex-col items-center select-none py-6 sm:py-10">
+        <div className="w-full flex items-center justify-center cursor-pointer overflow-hidden">
+          <TextLoop
+            text={text}
+            shape="wave"
+            speed={85}
+            direction="forward"
+            separator="✦"
+            curviness={65}
+            fontSize={44}
+            fontWeight={800}
+            letterSpacing={2.5}
+            uppercase={true}
+            color="#ffffff"
+            ribbon={true}
+            ribbonColor="#18181b"
+            ribbonWidth={84}
+            pauseOnHover={true}
+            preserveAspectRatio="none"
+            className="w-full"
+          />
+        </div>
+
+        <div className="max-w-7xl mx-auto w-full px-6 sm:px-8 md:px-12 flex flex-col items-center gap-6 mt-4 text-center">
+          <p className="font-sans text-sm md:text-base text-white/50 max-w-lg mx-auto">
             Seeking collaborations, custom UI/UX design systems, interaction consultations, or advanced digital product engineering.
           </p>
 
           {/* Magnetic High-Contrast Email CTA */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 mt-4">
+          <div className="flex flex-col sm:flex-row items-center gap-4 mt-2">
             <a
               ref={emailButtonRef}
               href="mailto:navodith07@gmail.com"
@@ -172,7 +172,7 @@ function FooterComponent() {
       </div>
 
       {/* Footer Nav & Signature Matrix */}
-      <div className="max-w-7xl mx-auto w-full border-t border-white/10 pt-10 mt-16">
+      <div className="max-w-7xl mx-auto w-full px-6 sm:px-8 md:px-12 border-t border-white/10 pt-10 mt-16">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12 items-center justify-between font-mono text-[10px] sm:text-xs text-white/40 tracking-wider">
           
           {/* Copyright Signature (Cols 1-6) */}

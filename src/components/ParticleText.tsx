@@ -27,6 +27,7 @@ const rgbToCss = (rgb: RgbColor): string => `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
 
 const clamp = (value: number, min: number, max: number): number => Math.min(Math.max(value, min), max);
 const easeOutCubic = (t: number): number => 1 - Math.pow(1 - t, 3);
+const easeOutExpo = (t: number): number => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t));
 
 const resolveFontSize = (
   value: number | string,
@@ -84,12 +85,15 @@ export interface ParticleTextProps {
 interface Particle {
   x: number;
   y: number;
+  vx: number;
+  vy: number;
   startX: number;
   startY: number;
   targetX: number;
   targetY: number;
-  size: number;
+  baseSize: number;
   color: string;
+  highlightColorStr: string;
   seed: number;
   depth: number;
   delay: number;
@@ -102,19 +106,19 @@ interface Target {
 }
 
 const ParticleText: React.FC<ParticleTextProps> = ({
-  text = 'React Bits',
-  particleSize = 2.2,
+  text = "LET'S CRAFT THE FUTURE",
+  particleSize = 2.4,
   density = 4,
   color = '#f8fafc',
-  highlightColor = '#646365',
-  scatter = 190,
+  highlightColor = '#ffffff',
+  scatter = 220,
   gatherDuration = 1600,
-  stagger = 420,
-  pointerRepel = 42,
-  repelRadius = 120,
-  idleDrift = 0.8,
+  stagger = 400,
+  pointerRepel = 70,
+  repelRadius = 140,
+  idleDrift = 0.6,
   trigger = 'view',
-  fontSize = 'clamp(3rem, 12vw, 8rem)',
+  fontSize = 'clamp(2.4rem, 6.2vw, 5.2rem)',
   fontWeight = 800,
   fontFamily = 'inherit',
   glow = true,
@@ -141,18 +145,22 @@ const ParticleText: React.FC<ParticleTextProps> = ({
     let gathering = false;
     let gatherStart = 0;
     let hasGathered = false;
-    let isIntersectingViewport = false;
     let reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     let width = 0;
     let height = 0;
     let dpr = 1;
 
+    // Pointer state
     const pointer = {
       active: false,
-      x: -1000,
-      y: -1000,
-      smoothX: -1000,
-      smoothY: -1000,
+      x: -2000,
+      y: -2000,
+      prevX: -2000,
+      prevY: -2000,
+      vx: 0,
+      vy: 0,
+      pulseX: 0,
+      pulseY: 0,
       pulseRadius: 0,
       pulseMaxRadius: 0
     };
@@ -160,16 +168,21 @@ const ParticleText: React.FC<ParticleTextProps> = ({
     const scatterAllParticles = () => {
       if (!particles.length) return;
       const spread = reducedMotion ? 0 : scatter;
+      const w = width || 800;
+      const h = height || 300;
+
       particles.forEach(p => {
         const angle = p.seed * Math.PI * 2;
-        const distance = spread * (0.65 + p.depth * 0.85);
-        const randOffsetW = (p.seed - 0.5) * (width * 0.75);
-        const randOffsetH = (p.depth - 0.5) * (height * 0.8);
+        const distance = spread * (0.6 + p.depth * 0.9);
+        const randOffsetW = (p.seed - 0.5) * (w * 0.9);
+        const randOffsetH = (p.depth - 0.5) * (h * 0.9);
 
         p.startX = p.targetX + Math.cos(angle) * distance + randOffsetW;
         p.startY = p.targetY + Math.sin(angle) * distance + randOffsetH;
         p.x = p.startX;
         p.y = p.startY;
+        p.vx = 0;
+        p.vy = 0;
         p.delay = reducedMotion ? 0 : p.seed * stagger;
       });
     };
@@ -182,7 +195,9 @@ const ParticleText: React.FC<ParticleTextProps> = ({
         particles.forEach(p => {
           p.startX = p.x;
           p.startY = p.y;
-          p.delay = reducedMotion ? 0 : p.seed * (stagger * 0.6);
+          p.vx = 0;
+          p.vy = 0;
+          p.delay = reducedMotion ? 0 : p.seed * (stagger * 0.4);
         });
       } else {
         scatterAllParticles();
@@ -193,101 +208,164 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       hasGathered = true;
     };
 
-    const drawParticle = (particle: Particle, currentSize: number) => {
-      ctx.fillStyle = particle.color;
+    const drawParticle = (x: number, y: number, size: number, particleColor: string, isGlowing: boolean) => {
+      ctx.fillStyle = particleColor;
 
-      if (currentSize <= 2.2) {
-        ctx.fillRect(particle.x - currentSize / 2, particle.y - currentSize / 2, currentSize, currentSize);
-        return;
+      if (isGlowing && glow && !reducedMotion) {
+        ctx.shadowBlur = size * 2.5;
+        ctx.shadowColor = '#ffffff';
+      } else {
+        ctx.shadowBlur = 0;
       }
 
-      ctx.beginPath();
-      ctx.arc(particle.x, particle.y, currentSize / 2, 0, Math.PI * 2);
-      ctx.fill();
+      if (size <= 2) {
+        ctx.fillRect(x - size / 2, y - size / 2, size, size);
+      } else {
+        ctx.beginPath();
+        ctx.arc(x, y, size / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     };
 
     const render = (now: number) => {
       ctx.clearRect(0, 0, width, height);
 
-      if (glow && !reducedMotion) {
-        ctx.shadowBlur = particleSize * 3;
-        ctx.shadowColor = highlightColor;
-      } else {
-        ctx.shadowBlur = 0;
-      }
-
-      if (pointer.active) {
-        pointer.smoothX += (pointer.x - pointer.smoothX) * 0.28;
-        pointer.smoothY += (pointer.y - pointer.smoothY) * 0.28;
-      }
-
       let allCompleted = true;
-      const currentRepelRadius = pointer.pulseRadius > 0 ? Math.max(repelRadius, pointer.pulseRadius) : repelRadius;
+      const repelRad = repelRadius;
 
-      for (let i = 0; i < particles.length; i++) {
+      // Pulse wave expansion
+      if (pointer.pulseRadius > 0) {
+        pointer.pulseRadius += 6.5;
+        if (pointer.pulseRadius > pointer.pulseMaxRadius) {
+          pointer.pulseRadius = 0;
+        }
+      }
+
+      const totalParticles = particles.length;
+      for (let i = 0; i < totalParticles; i++) {
         const particle = particles[i];
-        let progress = 1;
-        let particleCurrentSize = particle.size;
 
         if (gathering) {
+          // Entry gathering animation phase
           const local = (now - gatherStart - particle.delay) / Math.max(1, reducedMotion ? 1 : gatherDuration);
-          progress = clamp(local, 0, 1);
-          const eased = easeOutCubic(progress);
-          particle.x = particle.startX + (particle.targetX - particle.startX) * eased;
-          particle.y = particle.startY + (particle.targetY - particle.startY) * eased;
+          const progress = clamp(local, 0, 1);
+          const eased = easeOutExpo(progress);
 
-          if (progress < 1) allCompleted = false;
-        } else if (!hasGathered && trigger === 'view') {
-          // Floating scattered state before entering viewport
-          const driftTime = now * 0.001;
-          particle.x = particle.startX + Math.sin(driftTime * 0.8 + particle.seed * 10) * 14 * particle.depth;
-          particle.y = particle.startY + Math.cos(driftTime * 0.65 + particle.depth * 10) * 14 * particle.depth;
-          progress = 0.4;
-        } else {
-          // Formed text with hover repel and smooth attraction back
-          let destX = particle.targetX;
-          let destY = particle.targetY;
+          const curTargetX = particle.startX + (particle.targetX - particle.startX) * eased;
+          const curTargetY = particle.startY + (particle.targetY - particle.startY) * eased;
 
-          // Repel from mouse / touch pointer
-          if (pointer.active && !reducedMotion && currentRepelRadius > 0) {
-            const dx = destX - pointer.smoothX;
-            const dy = destY - pointer.smoothY;
-            const distance = Math.hypot(dx, dy);
+          // React dynamically to pointer hover even while gathering
+          let pushX = 0;
+          let pushY = 0;
+          let isHovered = false;
+          let curSize = particle.baseSize;
 
-            if (distance < currentRepelRadius && distance > 0) {
-              const ratio = 1 - distance / currentRepelRadius;
-              const force = Math.pow(ratio, 1.4) * pointerRepel * 2.5;
+          if (pointer.active && !reducedMotion && repelRad > 0) {
+            const dx = (curTargetX + particle.vx) - pointer.x;
+            const dy = (curTargetY + particle.vy) - pointer.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist < repelRad && dist > 0) {
+              const ratio = 1 - dist / repelRad;
+              const force = Math.pow(ratio, 1.2) * (pointerRepel * 0.4);
               const angle = Math.atan2(dy, dx);
-
-              destX += Math.cos(angle) * force;
-              destY += Math.sin(angle) * force;
-
-              particleCurrentSize = particle.size * (1 + ratio * 1.6);
+              const swirlAngle = angle + (particle.seed - 0.5) * 0.8 * ratio;
+              particle.vx += Math.cos(swirlAngle) * force + pointer.vx * ratio * 0.25;
+              particle.vy += Math.sin(swirlAngle) * force + pointer.vy * ratio * 0.25;
+              curSize = particle.baseSize * (1 + ratio * 2.2);
+              isHovered = true;
             }
           }
 
-          // Smooth attraction toward destX, destY
-          const easeSpeed = reducedMotion ? 1 : 0.14;
-          particle.x += (destX - particle.x) * easeSpeed;
-          particle.y += (destY - particle.y) * easeSpeed;
+          particle.vx *= 0.86;
+          particle.vy *= 0.86;
+          particle.x = curTargetX + particle.vx;
+          particle.y = curTargetY + particle.vy;
 
-          // Subtle idle drift when not interacting
-          if (idleDrift > 0 && !pointer.active && !reducedMotion) {
-            const driftTime = now * 0.001;
-            particle.x += Math.sin(driftTime * 0.8 + particle.seed * 10) * idleDrift * 0.25 * particle.depth;
-            particle.y += Math.cos(driftTime * 0.65 + particle.depth * 10) * idleDrift * 0.25 * particle.depth;
+          ctx.globalAlpha = clamp(0.35 + progress * 0.65 + (isHovered ? 0.35 : 0), 0, 1);
+          drawParticle(particle.x, particle.y, curSize, isHovered ? particle.highlightColorStr : particle.color, isHovered);
+
+          if (progress < 1) allCompleted = false;
+        } else if (!hasGathered && trigger === 'view') {
+          // Ambient floating cloud before entering view
+          const driftTime = now * 0.001;
+          const px = particle.startX + Math.sin(driftTime * 0.8 + particle.seed * 10) * 12 * particle.depth;
+          const py = particle.startY + Math.cos(driftTime * 0.65 + particle.depth * 10) * 12 * particle.depth;
+
+          ctx.globalAlpha = 0.35;
+          drawParticle(px, py, particle.baseSize * 0.85, particle.color, false);
+        } else {
+          // Fully assembled interactive state with velocity-based fluid repulsion & spring return
+          let isHovered = false;
+          let curSize = particle.baseSize;
+
+          if (!reducedMotion) {
+            // Direct dynamic repulsion from cursor
+            if (pointer.active && repelRad > 0) {
+              const dx = particle.x - pointer.x;
+              const dy = particle.y - pointer.y;
+              const dist = Math.hypot(dx, dy);
+
+              if (dist < repelRad && dist > 0) {
+                const ratio = 1 - dist / repelRad;
+                const force = Math.pow(ratio, 1.2) * (pointerRepel * 0.55);
+                const angle = Math.atan2(dy, dx);
+                const swirlAngle = angle + (particle.seed - 0.5) * 0.9 * ratio;
+
+                // Push velocity directly away from cursor + cursor velocity transfer
+                particle.vx += Math.cos(swirlAngle) * force + pointer.vx * ratio * 0.35;
+                particle.vy += Math.sin(swirlAngle) * force + pointer.vy * ratio * 0.35;
+
+                curSize = particle.baseSize * (1 + ratio * 2.6);
+                isHovered = true;
+              }
+            }
+
+            // Radial pulse shockwave from click/enter
+            if (pointer.pulseRadius > 0) {
+              const pdx = particle.x - pointer.pulseX;
+              const pdy = particle.y - pointer.pulseY;
+              const pDist = Math.hypot(pdx, pdy);
+              const ringDist = Math.abs(pDist - pointer.pulseRadius);
+              const ringWidth = 55;
+
+              if (ringDist < ringWidth && pDist > 0) {
+                const ringFactor = (1 - ringDist / ringWidth) * (1 - pointer.pulseRadius / pointer.pulseMaxRadius);
+                const pAngle = Math.atan2(pdy, pdx);
+                particle.vx += Math.cos(pAngle) * ringFactor * 14;
+                particle.vy += Math.sin(pAngle) * ringFactor * 14;
+                isHovered = true;
+                curSize = particle.baseSize * (1 + ringFactor * 2.2);
+              }
+            }
+
+            // High-precision Hooke's spring return towards particle.targetX, particle.targetY
+            const springDx = particle.targetX - particle.x;
+            const springDy = particle.targetY - particle.y;
+            const springK = 0.065;
+            const friction = 0.84;
+
+            particle.vx += springDx * springK;
+            particle.vy += springDy * springK;
+            particle.vx *= friction;
+            particle.vy *= friction;
+
+            // Ambient organic micro-drift when resting
+            if (idleDrift > 0 && !pointer.active && Math.hypot(particle.vx, particle.vy) < 0.15) {
+              const driftTime = now * 0.001;
+              particle.vx += Math.sin(driftTime * 0.9 + particle.seed * 10) * idleDrift * 0.02 * particle.depth;
+              particle.vy += Math.cos(driftTime * 0.75 + particle.depth * 10) * idleDrift * 0.02 * particle.depth;
+            }
+
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+          } else {
+            particle.x = particle.targetX;
+            particle.y = particle.targetY;
           }
-        }
 
-        ctx.globalAlpha = clamp(0.35 + progress * 0.65, 0, 1);
-        drawParticle(particle, particleCurrentSize);
-      }
-
-      // Decay tap pulse
-      if (pointer.pulseRadius > 0) {
-        pointer.pulseRadius += 6;
-        if (pointer.pulseRadius > pointer.pulseMaxRadius) {
-          pointer.pulseRadius = 0;
+          ctx.globalAlpha = isHovered ? 1.0 : 0.88;
+          drawParticle(particle.x, particle.y, curSize, isHovered ? particle.highlightColorStr : particle.color, isHovered);
         }
       }
 
@@ -296,15 +374,10 @@ const ParticleText: React.FC<ParticleTextProps> = ({
 
       if (gathering && allCompleted) {
         gathering = false;
+        hasGathered = true;
       }
 
       animationFrame = window.requestAnimationFrame(render);
-    };
-
-    const ensureRenderLoop = () => {
-      if (animationFrame === null) {
-        animationFrame = window.requestAnimationFrame(render);
-      }
     };
 
     const sampleText = async () => {
@@ -382,31 +455,34 @@ const ParticleText: React.FC<ParticleTextProps> = ({
         }
       }
 
-      const maxParticles = Math.max(900, Math.min(5200, Math.floor((width * height) / 90)));
+      const maxParticles = Math.max(900, Math.min(4800, Math.floor((width * height) / 95)));
       const stride = Math.max(1, Math.ceil(targets.length / maxParticles));
-      const baseRgb = hexToRgb(color);
-      const highlightRgb = hexToRgb(highlightColor);
+      const baseRgb = hexToRgb(color) || { r: 248, g: 250, b: 252 };
+      const highlightRgb = hexToRgb(highlightColor) || { r: 255, g: 255, b: 255 };
       const selected = targets.filter((_, index) => index % stride === 0);
 
       particles = selected.map((target, index) => {
         const seed = ((index * 9301 + 49297) % 233280) / 233280;
         const depth = 0.45 + (((index * 233 + 97) % 1000) / 1000) * 0.9;
-        const blend = baseRgb && highlightRgb ? clamp(target.x / Math.max(1, width) + (seed - 0.5) * 0.35, 0, 1) : 0;
-        const particleColor = baseRgb && highlightRgb ? rgbToCss(mixRgb(baseRgb, highlightRgb, blend)) : color;
+        const blend = clamp(target.x / Math.max(1, width) + (seed - 0.5) * 0.35, 0, 1);
+        const particleColor = rgbToCss(mixRgb(baseRgb, { r: 200, g: 215, b: 230 }, blend * 0.5));
         const angle = seed * Math.PI * 2;
-        const distance = (reducedMotion ? 0 : scatter) * (0.65 + depth * 0.85);
-        const startX = target.x + Math.cos(angle) * distance + (seed - 0.5) * (width * 0.75);
-        const startY = target.y + Math.sin(angle) * distance + (depth - 0.5) * (height * 0.8);
+        const distance = (reducedMotion ? 0 : scatter) * (0.6 + depth * 0.9);
+        const startX = target.x + Math.cos(angle) * distance + (seed - 0.5) * (width * 0.9);
+        const startY = target.y + Math.sin(angle) * distance + (depth - 0.5) * (height * 0.9);
 
         return {
           x: reducedMotion ? target.x : startX,
           y: reducedMotion ? target.y : startY,
+          vx: 0,
+          vy: 0,
           startX,
           startY,
           targetX: target.x,
           targetY: target.y,
-          size: Math.max(0.6, particleSize * (0.75 + target.alpha * 0.45)),
+          baseSize: Math.max(0.8, particleSize * (0.75 + target.alpha * 0.4)),
           color: particleColor,
+          highlightColorStr: '#ffffff',
           seed,
           depth,
           delay: seed * stagger
@@ -414,19 +490,19 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       });
 
       if (reducedMotion) {
-        particles.forEach(particle => {
-          particle.x = particle.targetX;
-          particle.y = particle.targetY;
-          particle.startX = particle.targetX;
-          particle.startY = particle.targetY;
-          particle.delay = 0;
+        particles.forEach(p => {
+          p.x = p.targetX;
+          p.y = p.targetY;
         });
         gathering = false;
         hasGathered = true;
       } else if (trigger === 'mount') {
         startGather(false);
       } else if (trigger === 'view') {
-        if (isIntersectingViewport) {
+        // Check if currently visible in viewport
+        const currentRect = container.getBoundingClientRect();
+        const inView = currentRect.top < window.innerHeight * 0.95 && currentRect.bottom > 0;
+        if (inView) {
           startGather(false);
         } else {
           scatterAllParticles();
@@ -434,7 +510,9 @@ const ParticleText: React.FC<ParticleTextProps> = ({
         }
       }
 
-      ensureRenderLoop();
+      if (animationFrame === null) {
+        animationFrame = window.requestAnimationFrame(render);
+      }
     };
 
     const queueSample = () => {
@@ -442,94 +520,152 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       resizeFrame = window.requestAnimationFrame(sampleText);
     };
 
+    // Robust pointer tracking
     const updatePointerPos = (clientX: number, clientY: number) => {
       const rect = canvas.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const y = clientY - rect.top;
-      pointer.x = x;
-      pointer.y = y;
-      if (!pointer.active || pointer.smoothX === -1000) {
-        pointer.smoothX = x;
-        pointer.smoothY = y;
+      const currentX = clientX - rect.left;
+      const currentY = clientY - rect.top;
+
+      if (pointer.prevX !== -2000) {
+        pointer.vx = currentX - pointer.prevX;
+        pointer.vy = currentY - pointer.prevY;
+      } else {
+        pointer.vx = 0;
+        pointer.vy = 0;
       }
+
+      pointer.prevX = currentX;
+      pointer.prevY = currentY;
+      pointer.x = currentX;
+      pointer.y = currentY;
       pointer.active = true;
+
+      // If text hasn't gathered yet, hover immediately kicks off gathering
+      if (!hasGathered && particles.length > 0 && !gathering) {
+        startGather(true);
+      }
     };
 
-    const handlePointerMove = (event: PointerEvent | MouseEvent) => {
-      updatePointerPos(event.clientX, event.clientY);
+    const handlePointerMove = (e: PointerEvent | MouseEvent) => {
+      updatePointerPos(e.clientX, e.clientY);
+    };
+
+    const handlePointerEnter = (e: PointerEvent | MouseEvent) => {
+      updatePointerPos(e.clientX, e.clientY);
+      pointer.pulseX = pointer.x;
+      pointer.pulseY = pointer.y;
+      pointer.pulseRadius = 15;
+      pointer.pulseMaxRadius = Math.max(repelRadius * 1.8, 200);
     };
 
     const handlePointerLeave = () => {
       pointer.active = false;
-      pointer.x = -1000;
-      pointer.y = -1000;
+      pointer.x = -2000;
+      pointer.y = -2000;
+      pointer.prevX = -2000;
+      pointer.prevY = -2000;
+      pointer.vx = 0;
+      pointer.vy = 0;
     };
 
-    const handlePointerEnter = (event: PointerEvent | MouseEvent) => {
-      updatePointerPos(event.clientX, event.clientY);
-    };
-
-    const triggerTapPulse = (clientX: number, clientY: number) => {
-      updatePointerPos(clientX, clientY);
+    const handlePointerDown = (e: PointerEvent | MouseEvent) => {
+      updatePointerPos(e.clientX, e.clientY);
+      pointer.pulseX = pointer.x;
+      pointer.pulseY = pointer.y;
       pointer.pulseRadius = 20;
-      pointer.pulseMaxRadius = repelRadius * 1.8;
+      pointer.pulseMaxRadius = Math.max(repelRadius * 2.5, 260);
     };
 
-    const handlePointerDown = (event: PointerEvent | MouseEvent) => {
-      triggerTapPulse(event.clientX, event.clientY);
-    };
-
-    const handleTouchStart = (event: TouchEvent) => {
-      if (event.touches.length > 0) {
-        const touch = event.touches[0];
-        triggerTapPulse(touch.clientX, touch.clientY);
+    const handleTouchStart = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
+        updatePointerPos(touch.clientX, touch.clientY);
+        pointer.pulseX = pointer.x;
+        pointer.pulseY = pointer.y;
+        pointer.pulseRadius = 20;
+        pointer.pulseMaxRadius = Math.max(repelRadius * 2.5, 260);
       }
     };
 
-    const handleTouchMove = (event: TouchEvent) => {
-      if (event.touches.length > 0) {
-        const touch = event.touches[0];
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        const touch = e.touches[0];
         updatePointerPos(touch.clientX, touch.clientY);
       }
     };
 
     const handleTouchEnd = () => {
-      pointer.active = false;
+      handlePointerLeave();
     };
 
-    // IntersectionObserver to trigger gathering on scroll into viewport
+    // Dual-trigger viewport detection (IntersectionObserver + Scroll check fallback)
+    const checkViewportVisibility = () => {
+      if (trigger !== 'view' || reducedMotion) return;
+      const rect = container.getBoundingClientRect();
+      const inView = rect.top < window.innerHeight * 0.88 && rect.bottom > window.innerHeight * 0.1;
+
+      if (inView) {
+        if (!hasGathered && particles.length > 0 && !gathering) {
+          startGather(false);
+        }
+      } else if (rect.bottom < -100 || rect.top > window.innerHeight + 200) {
+        if (hasGathered) {
+          hasGathered = false;
+          gathering = false;
+          scatterAllParticles();
+        }
+      }
+    };
+
     let intersectionObserver: IntersectionObserver | null = null;
     if (trigger === 'view' && typeof IntersectionObserver !== 'undefined') {
       intersectionObserver = new IntersectionObserver(
         entries => {
           entries.forEach(entry => {
-            isIntersectingViewport = entry.isIntersecting;
             if (entry.isIntersecting) {
-              if (!hasGathered && particles.length > 0) {
+              if (!hasGathered && particles.length > 0 && !gathering) {
                 startGather(false);
               }
             } else {
-              // When completely out of view, reset state so re-entry starts scattered and gathers again
-              hasGathered = false;
-              gathering = false;
-              if (particles.length > 0) {
-                scatterAllParticles();
+              const rect = entry.boundingClientRect;
+              if (rect.top > window.innerHeight || rect.bottom < 0) {
+                hasGathered = false;
+                gathering = false;
+                if (particles.length > 0) {
+                  scatterAllParticles();
+                }
               }
             }
           });
         },
-        { threshold: 0.08 }
+        {
+          rootMargin: '0px 0px -5% 0px',
+          threshold: 0.1
+        }
       );
       intersectionObserver.observe(container);
     }
 
-    const reduceMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
-    const handleReduceMotionChange = (event: MediaQueryListEvent) => {
-      reducedMotion = event.matches;
-      sampleText();
+    const onGlobalPointerMove = (e: MouseEvent | PointerEvent) => {
+      if (!canvas) return;
+      const rect = canvas.getBoundingClientRect();
+      const pad = 60;
+      if (
+        e.clientX >= rect.left - pad &&
+        e.clientX <= rect.right + pad &&
+        e.clientY >= rect.top - pad &&
+        e.clientY <= rect.bottom + pad
+      ) {
+        updatePointerPos(e.clientX, e.clientY);
+      } else if (pointer.active) {
+        handlePointerLeave();
+      }
     };
 
-    reduceMotionQuery?.addEventListener('change', handleReduceMotionChange);
+    window.addEventListener('scroll', checkViewportVisibility, { passive: true });
+    window.addEventListener('pointermove', onGlobalPointerMove, { passive: true });
+
+    // Attach interaction listeners to window, container and canvas
     canvas.addEventListener('pointerenter', handlePointerEnter as any);
     canvas.addEventListener('pointermove', handlePointerMove as any);
     canvas.addEventListener('pointerdown', handlePointerDown as any);
@@ -537,7 +673,18 @@ const ParticleText: React.FC<ParticleTextProps> = ({
     canvas.addEventListener('touchstart', handleTouchStart as any, { passive: true });
     canvas.addEventListener('touchmove', handleTouchMove as any, { passive: true });
     canvas.addEventListener('touchend', handleTouchEnd as any);
-    canvas.addEventListener('touchcancel', handleTouchEnd as any);
+
+    container.addEventListener('pointerenter', handlePointerEnter as any);
+    container.addEventListener('pointermove', handlePointerMove as any);
+    container.addEventListener('pointerdown', handlePointerDown as any);
+    container.addEventListener('pointerleave', handlePointerLeave);
+
+    const reduceMotionQuery = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+    const handleReduceMotionChange = (e: MediaQueryListEvent) => {
+      reducedMotion = e.matches;
+      sampleText();
+    };
+    reduceMotionQuery?.addEventListener('change', handleReduceMotionChange);
 
     const resizeObserver = new ResizeObserver(queueSample);
     resizeObserver.observe(container);
@@ -547,7 +694,10 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       buildId += 1;
       resizeObserver.disconnect();
       intersectionObserver?.disconnect();
+      window.removeEventListener('scroll', checkViewportVisibility);
+      window.removeEventListener('pointermove', onGlobalPointerMove);
       reduceMotionQuery?.removeEventListener('change', handleReduceMotionChange);
+
       canvas.removeEventListener('pointerenter', handlePointerEnter as any);
       canvas.removeEventListener('pointermove', handlePointerMove as any);
       canvas.removeEventListener('pointerdown', handlePointerDown as any);
@@ -555,7 +705,11 @@ const ParticleText: React.FC<ParticleTextProps> = ({
       canvas.removeEventListener('touchstart', handleTouchStart as any);
       canvas.removeEventListener('touchmove', handleTouchMove as any);
       canvas.removeEventListener('touchend', handleTouchEnd as any);
-      canvas.removeEventListener('touchcancel', handleTouchEnd as any);
+
+      container.removeEventListener('pointerenter', handlePointerEnter as any);
+      container.removeEventListener('pointermove', handlePointerMove as any);
+      container.removeEventListener('pointerdown', handlePointerDown as any);
+      container.removeEventListener('pointerleave', handlePointerLeave);
 
       if (animationFrame !== null) window.cancelAnimationFrame(animationFrame);
       if (resizeFrame !== null) window.cancelAnimationFrame(resizeFrame);
@@ -580,7 +734,12 @@ const ParticleText: React.FC<ParticleTextProps> = ({
   ]);
 
   return (
-    <div ref={containerRef} className={`particle-text ${className}`} style={style} aria-label={text}>
+    <div
+      ref={containerRef}
+      className={`particle-text interactive-hover ${className}`}
+      style={style}
+      aria-label={text}
+    >
       <canvas ref={canvasRef} className="particle-text__canvas" aria-hidden="true" />
       <span className="particle-text__sr">{text}</span>
     </div>

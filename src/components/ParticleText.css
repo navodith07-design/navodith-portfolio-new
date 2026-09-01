@@ -7,6 +7,11 @@
   overflow: hidden;
   touch-action: none;
   isolation: isolate;
+  cursor: grab;
+}
+
+.particle-text:active {
+  cursor: grabbing;
 }
 
 .particle-text__canvas {
@@ -15,6 +20,7 @@
   display: block;
   width: 100%;
   height: 100%;
+  pointer-events: auto;
 }
 
 .particle-text__sr {

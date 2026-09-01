@@ -307,9 +307,10 @@ export const OptionWheel: React.FC<OptionWheelProps> = ({
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
       e.stopPropagation();
+      e.stopImmediatePropagation?.();
       const cfg = cfgRef.current;
       const delta = e.deltaMode === 1 ? e.deltaY * 24 : e.deltaY;
-      const step = Math.max(-1.5, Math.min(1.5, delta / (cfg.rowH * 0.8)));
+      const step = Math.max(-1.5, Math.min(1.5, delta / (cfg.rowH * 0.75)));
       applyTarget(targetRef.current + step, false);
       if (wheelTimerRef.current) clearTimeout(wheelTimerRef.current);
       wheelTimerRef.current = setTimeout(() => applyTarget(targetRef.current, true), 120);

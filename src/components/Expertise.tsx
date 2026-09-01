@@ -280,18 +280,7 @@ function ExpertiseComponent() {
 
       const mobile = window.innerWidth < 768;
       if (mobile) {
-        // Mobile view alone: keep scroll to spin the wheel as the user scrolls through the section
-        ScrollTrigger.create({
-          trigger: sectionRef.current,
-          start: "top 65%",
-          end: "bottom 30%",
-          scrub: 0.3,
-          onUpdate: (self) => {
-            const rawIdx = Math.floor(self.progress * SKILLS.length);
-            const clampedIdx = Math.min(Math.max(0, rawIdx), SKILLS.length - 1);
-            setSelectedIndex((prev) => (prev !== clampedIdx ? clampedIdx : prev));
-          },
-        });
+        // On mobile, let page scroll naturally through the section; skills wheel is interacted with directly
         return;
       }
 
@@ -398,7 +387,11 @@ function ExpertiseComponent() {
                 </div>
 
                 {/* Option Wheel Outer Glass Frame */}
-                <div className="relative w-full h-[190px] xs:h-[220px] sm:h-[280px] md:h-[360px] rounded-2xl bg-white/45 backdrop-blur-xl border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)] hover:border-white transition-all duration-300 overflow-hidden flex items-center justify-center p-2">
+                <div 
+                  data-lenis-prevent="true"
+                  data-lenis-prevent-wheel="true"
+                  className="relative w-full h-[190px] xs:h-[220px] sm:h-[280px] md:h-[360px] rounded-2xl bg-white/45 backdrop-blur-xl border border-white/80 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.95),0_10px_35px_-8px_rgba(0,0,0,0.07)] hover:border-white transition-all duration-300 overflow-hidden flex items-center justify-center p-2"
+                >
                   {/* Active Selection Indicator Box */}
                   <div className="absolute inset-x-3 top-1/2 -translate-y-1/2 h-11 sm:h-14 rounded-xl bg-gradient-to-b from-white/80 via-white/55 to-white/70 backdrop-blur-md border border-white/95 shadow-[inset_0_1.5px_2px_rgba(255,255,255,1),0_8px_25px_-5px_rgba(0,0,0,0.08)] pointer-events-none z-0 overflow-hidden">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent opacity-80" />
@@ -452,7 +445,7 @@ function ExpertiseComponent() {
                     inset={16}
                     loop={false}
                     draggable={true}
-                    enableWheel={isMobile}
+                    enableWheel={true}
                     enableSound={true}
                     soundVolume={0.5}
                     className="z-10"
