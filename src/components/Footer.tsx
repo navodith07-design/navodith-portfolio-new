@@ -117,21 +117,21 @@ function FooterComponent() {
             <ParticleText
               text={text}
               particleSize={2.2}
-              density={3}
-              color="#ffffff"
-              highlightColor="#ffffff"
-              scatter={170}
-              gatherDuration={1500}
-              stagger={380}
-              pointerRepel={32}
+              density={4}
+              color="#f8fafc"
+              highlightColor="#646365"
+              scatter={190}
+              gatherDuration={1600}
+              stagger={420}
+              pointerRepel={42}
               repelRadius={120}
-              idleDrift={0.6}
+              idleDrift={0.8}
               trigger="view"
               fontSize="clamp(2.4rem, 6.2vw, 5.2rem)"
               fontWeight={800}
               fontFamily="inherit"
               glow={true}
-              className="w-full"
+              className="w-full h-full min-h-[180px] sm:min-h-[220px] md:min-h-[260px]"
             />
           </h2>
           <p className="font-sans text-sm md:text-base text-white/50 max-w-lg mx-auto -mt-2">

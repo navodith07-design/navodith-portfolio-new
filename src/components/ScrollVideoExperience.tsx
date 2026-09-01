@@ -195,9 +195,9 @@ export default function ScrollVideoExperience() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeStage}
-              className="w-full flex flex-col items-center justify-center text-center overflow-hidden px-2"
+              className="w-full flex flex-col items-center justify-center text-center px-2"
             >
-              <div className="overflow-hidden py-2 sm:py-4 w-full flex justify-center items-center">
+              <div className="overflow-hidden py-4 sm:py-6 px-3 sm:px-6 w-full flex justify-center items-center">
                 <motion.h1
                   initial={{ y: "115%", rotateX: -25, opacity: 0 }}
                   animate={{ y: "0%", rotateX: 0, opacity: 1 }}
@@ -210,7 +210,7 @@ export default function ScrollVideoExperience() {
                     fontFamily: 'var(--font-display, "Syne", sans-serif)',
                     transformPerspective: 1000,
                   }}
-                  className="text-[clamp(1.75rem,6.4vw,5.5rem)] font-extrabold tracking-tight text-white uppercase leading-none select-none sm:whitespace-nowrap max-w-full [text-shadow:_0_4px_24px_rgba(0,0,0,0.95),_0_12px_48px_rgba(0,0,0,0.9),_0_24px_72px_rgba(0,0,0,0.85)] drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
+                  className="text-[clamp(1.5rem,4.4vw,4.4rem)] lg:text-[clamp(2.25rem,4.8vw,4.8rem)] xl:text-[clamp(2.5rem,5.2vw,5.2rem)] font-extrabold tracking-tight text-white uppercase leading-[1.08] select-none whitespace-normal sm:whitespace-nowrap max-w-full [text-shadow:_0_4px_24px_rgba(0,0,0,0.95),_0_12px_48px_rgba(0,0,0,0.9),_0_24px_72px_rgba(0,0,0,0.85)] drop-shadow-[0_20px_40px_rgba(0,0,0,0.9)]"
                 >
                   {currentData.title}
                 </motion.h1>
